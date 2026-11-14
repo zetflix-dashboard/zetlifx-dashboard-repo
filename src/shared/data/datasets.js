@@ -6,7 +6,7 @@ const SQL0 = [
   '  CAST(operating_profit AS DOUBLE) AS operating_profit,',
   '  CAST(100.0 * operating_profit / NULLIF(net_revenue, 0) AS DOUBLE) AS margin_pct',
   "FROM read_parquet('pl_control.parquet') CROSS JOIN quarter_filter f",
-  "WHERE period >= f.first AND period <= f.last",
+  'WHERE period >= f.first AND period <= f.last',
   "  AND (f.quarter = 'all' OR date_part('quarter', period) = try_cast(f.quarter AS INTEGER))",
   'ORDER BY period',
 ].join('\n');
@@ -223,13 +223,17 @@ export const datasets = Object.freeze({
     dateRole: 'месяц признания',
     filters: ['period'],
     localFilters: [
-      { id: 'quarter', label: 'Квартал', options: [
-        { value: 'all', label: 'Все кварталы' },
-        { value: '1', label: 'I квартал' },
-        { value: '2', label: 'II квартал' },
-        { value: '3', label: 'III квартал' },
-        { value: '4', label: 'IV квартал' },
-      ] },
+      {
+        id: 'quarter',
+        label: 'Квартал',
+        options: [
+          { value: 'all', label: 'Все кварталы' },
+          { value: '1', label: 'I квартал' },
+          { value: '2', label: 'II квартал' },
+          { value: '3', label: 'III квартал' },
+          { value: '4', label: 'IV квартал' },
+        ],
+      },
     ],
     limitation:
       'Контрольные итоги PL_Control. Детальная сверка по фактам пока не реализована; сегментация недоступна.',

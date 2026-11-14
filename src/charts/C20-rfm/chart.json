@@ -23,11 +23,5 @@
     "revenue_per_user",
     "never_viewed_users"
   ],
-  "totals": [
-    "users",
-    "user_share_pct",
-    "revenue",
-    "share_pct",
-    "never_viewed_users"
-  ]
+  "totals": ["users", "user_share_pct", "revenue", "share_pct", "never_viewed_users"]
 }

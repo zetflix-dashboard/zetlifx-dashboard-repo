@@ -115,8 +115,15 @@ test('C03 quarter whitelist keeps its global period and rejects injected values'
     localFilters: ['quarter'],
   };
   assert.equal(availableLocalFilters(c03).length, 1);
-  assert.deepEqual(datasetQueryParams(c03, { periodFrom: '2024-01', periodTo: '2025-12' }, { quarter: '1' }), ['2024-01-01', '2025-12-01', '1']);
-  assert.deepEqual(datasetQueryParams(c03, { periodFrom: '2024-01', periodTo: '2025-12' }, {}), ['2024-01-01', '2025-12-01', 'all']);
+  assert.deepEqual(
+    datasetQueryParams(c03, { periodFrom: '2024-01', periodTo: '2025-12' }, { quarter: '1' }),
+    ['2024-01-01', '2025-12-01', '1'],
+  );
+  assert.deepEqual(datasetQueryParams(c03, { periodFrom: '2024-01', periodTo: '2025-12' }, {}), [
+    '2024-01-01',
+    '2025-12-01',
+    'all',
+  ]);
   assert.equal(datasets.financialMonthly.sql.split('?').length - 1, 3);
   assert.throws(() => validateLocalFilters(c03, { quarter: '1 OR TRUE' }));
   assert.throws(() => validateLocalFilters(c03, { quarter: '5' }));

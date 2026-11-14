@@ -373,7 +373,9 @@ test('RFM table is compact, includes only three metric bars and a totals row', a
   await expect(card).toHaveAttribute('gs-w', '12');
 });
 
-test('C03 quarter is a per-card filter and the system renders a subtle inline C-ID', async ({ page }) => {
+test('C03 quarter is a per-card filter and the system renders a subtle inline C-ID', async ({
+  page,
+}) => {
   await ready(page);
   const c03 = page.locator('[data-instance-id="c03-initial"]');
   await expect(c03.locator('.widget-chart-id')).toHaveText('· C03');
@@ -388,10 +390,21 @@ test('C03 quarter is a per-card filter and the system renders a subtle inline C-
   await expect(c03.locator('tbody tr')).toHaveCount(6, { timeout: 120000 });
   await expect(c03.locator('.widget-overlay:visible')).toHaveCount(0);
   await expect(page.locator('[data-instance-id="c18-initial"] canvas')).toHaveCount(1);
-  await expect.poll(() =>
-    page.evaluate(() => JSON.parse(localStorage.getItem('zetflix.workspaces.v2') || 'null')?.spaces?.[0]?.widgets?.find(w => w.chartId === 'C03')?.localFilters?.quarter)
-  ).toBe('1');
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          JSON.parse(
+            localStorage.getItem('zetflix.workspaces.v2') || 'null',
+          )?.spaces?.[0]?.widgets?.find((w) => w.chartId === 'C03')?.localFilters?.quarter,
+      ),
+    )
+    .toBe('1');
   await page.reload();
-  await expect(page.locator('[data-instance-id="c03-initial"] .widget-filter-select')).toHaveValue('1');
-  await expect(page.locator('[data-instance-id="c03-initial"] .widget-chart canvas')).toHaveCount(1);
+  await expect(page.locator('[data-instance-id="c03-initial"] .widget-filter-select')).toHaveValue(
+    '1',
+  );
+  await expect(page.locator('[data-instance-id="c03-initial"] .widget-chart canvas')).toHaveCount(
+    1,
+  );
 });
