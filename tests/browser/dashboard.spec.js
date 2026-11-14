@@ -84,6 +84,32 @@ test('mobile uses full width and saves canonical layout across resize', async ({
   await expect(page.locator('[data-instance-id="c03-initial"]')).toHaveAttribute('gs-w', '6');
   await expect(page.locator('[data-instance-id="c03-initial"]')).toHaveAttribute('gs-h', '6');
 });
+test('cards added on mobile keep desktop width after reload', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await ready(page);
+  await page.locator('#edit-btn').click();
+  await page.locator('#add-btn').click();
+  await page.locator('.catalog-option').first().click();
+  await expect(page.locator('.grid-stack-item')).toHaveCount(3);
+  await expect
+    .poll(() =>
+      page.evaluate((key) => JSON.parse(localStorage.getItem(key))?.spaces[0].widgets.length, key),
+    )
+    .toBe(3);
+  expect(
+    await page.evaluate(
+      (key) => JSON.parse(localStorage.getItem(key)).spaces[0].widgets.map((widget) => widget.w),
+      key,
+    ),
+  ).toEqual([6, 6, 6]);
+  await page.reload();
+  await expect(page.locator('.grid-stack-item')).toHaveCount(3);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await expect(page.locator('#dashboard-grid')).toHaveClass(/gs-12\b/);
+  for (const card of await page.locator('.grid-stack-item').all()) {
+    await expect(card).toHaveAttribute('gs-w', '6');
+  }
+});
 test('legacy empty layout is kept and malformed import does not replace work', async ({ page }) => {
   await page.addInitScript(() =>
     localStorage.setItem(

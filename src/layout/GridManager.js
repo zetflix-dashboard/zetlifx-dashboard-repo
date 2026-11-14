@@ -29,6 +29,7 @@ export class GridManager {
         draggable: { handle: '.widget-grip', scroll: true },
         resizable: { handles: 'se' },
         columnOpts: {
+          columnMax: 12,
           breakpoints: [
             { w: 660, c: 1 },
             { w: 1100, c: 6 },
@@ -52,6 +53,15 @@ export class GridManager {
   }
 
   addOne(widget, notify = true) {
+    if (notify && !this.silent) {
+      // New cards also enter through the canonical layout, even when the
+      // catalogue is opened on a phone. Never persist a responsive width.
+      const layout = this.getLayout();
+      layout.widgets.push(widget);
+      this.replace(layout);
+      this.onChange(this.getLayout());
+      return;
+    }
     const definition = ChartRegistry.get(widget.chartId);
     if (!definition) throw new Error('График не найден: ' + widget.chartId);
     if (this.items.has(widget.instanceId)) throw new Error('Повтор ID карточки');
@@ -184,7 +194,7 @@ export class GridManager {
   }
 
   getNextRow() {
-    return this.grid.getRow();
+    return Math.max(0, ...this.getLayout().widgets.map((widget) => widget.y + widget.h));
   }
   count() {
     return this.items.size;
