@@ -24,6 +24,7 @@ export function validateChart(raw, catalog = datasets) {
     'columnBars',
     'pointLabel',
     'localFilters',
+    'totals',
   ]);
   if (!/^C\d{2}$/.test(raw.id) || !text(raw.title, 90) || !text(raw.question, 300))
     throw new Error('Нужны C-ID, заголовок и вопрос');
@@ -44,6 +45,11 @@ export function validateChart(raw, catalog = datasets) {
     if (
       raw.dimension !== undefined ||
       raw.series !== undefined ||
+      (raw.totals !== undefined && (
+        !Array.isArray(raw.totals) || new Set(raw.totals).size !== raw.totals.length ||
+        raw.totals.some(field => !raw.columns.includes(field) ||
+          ['month', 'text'].includes(fields[field].unit))
+      )) ||
       !Array.isArray(raw.columns) ||
       !raw.columns.length ||
       raw.columns.length > 12 ||
@@ -61,6 +67,7 @@ export function validateChart(raw, catalog = datasets) {
   } else {
     if (
       raw.columns !== undefined ||
+      raw.totals !== undefined ||
       raw.columnBars !== undefined ||
       (raw.pointLabel !== undefined &&
         (raw.template !== 'scatter' ||
