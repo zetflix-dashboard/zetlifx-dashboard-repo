@@ -119,6 +119,20 @@ export class ChartManager {
         s.node.setAttribute('aria-busy', 'false');
     }
   }
+  applyTheme() {
+    for (const session of this.sessions.values()) {
+      if (session.chart && session.rows?.length) {
+        session.chart.setOption(
+          buildOption(
+            session.definition,
+            session.rows,
+            matchMedia('(prefers-reduced-motion: reduce)').matches,
+          ),
+          { notMerge: true },
+        );
+      }
+    }
+  }
   refreshAll() {
     for (const id of this.sessions.keys()) void this.refreshOne(id);
   }
