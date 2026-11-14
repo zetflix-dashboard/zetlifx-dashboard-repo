@@ -216,3 +216,49 @@ test('month range picker supports presets, cancel, and responsive layout', async
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
     .toBe(true);
 });
+
+test('OLED appearance and compact read-only widget actions', async ({ page }) => {
+  await ready(page);
+  await page.locator('#theme-toggle').click();
+  const dark = await page.locator('html').getAttribute('data-theme');
+  if (dark !== 'dark') await page.locator('#theme-toggle').click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect.poll(() => page.evaluate(() =>
+    getComputedStyle(document.documentElement).backgroundColor)).toBe('rgb(0, 0, 0)');
+  await expect(page.locator('.brand-caption')).toHaveCount(0);
+  await expect(page.locator('#filters-reset')).toHaveCount(0);
+  await expect(page.locator('.menu-trigger')).toContainText('···');
+  await expect(page.locator('.widget-grip').first()).toBeHidden();
+  await expect(page.locator('.widget-remove').first()).toBeHidden();
+  await expect(page.locator('.widget-title-row .widget-info').first()).toBeVisible();
+  await expect(page.locator('.widget-info summary').first()).toHaveAttribute('aria-label', /О данных/);
+  await page.locator('#edit-btn').click();
+  await expect(page.locator('.widget-grip').first()).toBeVisible();
+  await expect(page.locator('.widget-remove').first()).toBeVisible();
+  await page.locator('#edit-btn').click();
+  await expect(page.locator('.widget-grip').first()).toBeHidden();
+});
+
+test('C14 scatter, C15 donut and C20 RFM load with actual Parquet and data bars', async ({ page }) => {
+  test.setTimeout(180000);
+  await ready(page);
+  await page.locator('#edit-btn').click();
+  for (const id of ['C14', 'C15', 'C20']) {
+    await page.locator('#add-btn').click();
+    await page.locator('#catalog-search').fill(id);
+    await page.locator('.catalog-option:visible').first().click();
+  }
+  await expect(page.locator('.grid-stack-item')).toHaveCount(5);
+  await expect(page.locator('.widget-chart canvas')).toHaveCount(4, { timeout: 120000 });
+  await expect(page.locator('.widget-overlay:visible')).toHaveCount(0, { timeout: 120000 });
+  const rfm = page.locator('.grid-stack-item').filter({ hasText: 'RFM-сегменты пользователей' });
+  await expect(rfm.locator('tbody tr')).toHaveCount(21);
+  await expect(rfm.locator('.cell-bar').first()).toHaveAttribute('data-bar-index', '0');
+  await expect(rfm.locator('td.cell-bar').first()).toHaveCSS('background-image', /linear-gradient/);
+  const donut = page.locator('.grid-stack-item').filter({ hasText: 'Доля просмотров оригиналов' });
+  await expect(donut.locator('canvas')).toHaveCount(1);
+  const scatter = page.locator('.grid-stack-item').filter({ hasText: 'Стоимость часа по тайтлам' });
+  await expect(scatter.locator('canvas')).toHaveCount(1);
+  await page.locator('#edit-btn').click();
+  await expect(page.locator('.widget-grip').first()).toBeHidden();
+});
