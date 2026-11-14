@@ -45,12 +45,12 @@ export function validateChart(raw, catalog = datasets) {
     if (
       raw.dimension !== undefined ||
       raw.series !== undefined ||
+      !Array.isArray(raw.columns) ||
       (raw.totals !== undefined && (
         !Array.isArray(raw.totals) || new Set(raw.totals).size !== raw.totals.length ||
         raw.totals.some(field => !raw.columns.includes(field) ||
           ['month', 'text'].includes(fields[field].unit))
       )) ||
-      !Array.isArray(raw.columns) ||
       !raw.columns.length ||
       raw.columns.length > 12 ||
       raw.columns.some((f) => !validField(f)) ||
