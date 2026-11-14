@@ -28,7 +28,7 @@ export function initTheme(button, onChange) {
     button.title = label;
     document
       .querySelector('meta[name="theme-color"]')
-      ?.setAttribute('content', theme === 'dark' ? '#141918' : '#f4f3f0');
+      ?.setAttribute('content', theme === 'dark' ? '#000000' : '#f4f3f0');
     onChange();
   };
   apply(resolveTheme(readPreference(), query.matches));

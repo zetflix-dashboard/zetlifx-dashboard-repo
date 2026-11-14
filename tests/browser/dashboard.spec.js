@@ -24,7 +24,9 @@ test('real Parquet queries, shared table, period filter, no runtime errors', asy
   await page.locator('#period-apply').click();
   await expect(page.locator('tbody tr')).toHaveCount(1);
   await expect(page.locator('tbody tr').first().locator('td').nth(1)).not.toHaveText('—');
-  await page.locator('#filters-reset').click();
+  await page.locator('#period-trigger').click();
+  await page.locator('[data-period-preset="all"]').click();
+  await page.locator('#period-apply').click();
   await expect(page.locator('tbody tr')).toHaveCount(24);
   await page.screenshot({ path: 'test-results/dashboard-desktop.png', fullPage: true });
   expect(errors).toEqual([]);
@@ -180,7 +182,7 @@ test('theme toggle persists and recolors rendered charts without new queries', a
   await expect(page.locator('.widget-chart canvas')).toHaveCount(2);
   await expect
     .poll(() => page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor))
-    .toBe(next === 'dark' ? 'rgb(20, 25, 24)' : 'rgb(244, 243, 240)');
+    .toBe(next === 'dark' ? 'rgb(0, 0, 0)' : 'rgb(244, 243, 240)');
   await expect.poll(() => page.evaluate(() => localStorage.getItem('zetflix.theme'))).toBe(next);
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', next);
@@ -204,7 +206,9 @@ test('month range picker supports presets, cancel, and responsive layout', async
   await trigger.click();
   await page.keyboard.press('Escape');
   await expect(page.locator('#period-panel')).toBeHidden();
-  await page.locator('#filters-reset').click();
+  await trigger.click();
+  await page.locator('[data-period-preset="all"]').click();
+  await page.locator('#period-apply').click();
   await expect(trigger).toContainText('2024');
   await expect(trigger).toContainText('2025');
   await page.setViewportSize({ width: 390, height: 844 });
@@ -213,4 +217,56 @@ test('month range picker supports presets, cancel, and responsive layout', async
   await expect
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
     .toBe(true);
+});
+
+test('OLED appearance and compact read-only widget actions', async ({ page }) => {
+  await ready(page);
+  await page.locator('#theme-toggle').click();
+  const dark = await page.locator('html').getAttribute('data-theme');
+  if (dark !== 'dark') await page.locator('#theme-toggle').click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect
+    .poll(() => page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor))
+    .toBe('rgb(0, 0, 0)');
+  await expect(page.locator('.brand-caption')).toHaveCount(0);
+  await expect(page.locator('#filters-reset')).toHaveCount(0);
+  await expect(page.locator('.menu-trigger')).toContainText('···');
+  await expect(page.locator('.widget-grip').first()).toBeHidden();
+  await expect(page.locator('.widget-remove').first()).toBeHidden();
+  await expect(page.locator('.widget-title-row .widget-info').first()).toBeVisible();
+  await expect(page.locator('.widget-info summary').first()).toHaveAttribute(
+    'aria-label',
+    /О данных/,
+  );
+  await page.locator('#edit-btn').click();
+  await expect(page.locator('.widget-grip').first()).toBeVisible();
+  await expect(page.locator('.widget-remove').first()).toBeVisible();
+  await page.locator('#edit-btn').click();
+  await expect(page.locator('.widget-grip').first()).toBeHidden();
+});
+
+test('C14 scatter, C15 donut and C20 RFM load with actual Parquet and data bars', async ({
+  page,
+}) => {
+  test.setTimeout(180000);
+  await ready(page);
+  await page.locator('#edit-btn').click();
+  for (const id of ['C14', 'C15', 'C20']) {
+    await page.locator('#add-btn').click();
+    await page.locator('#catalog-search').fill(id);
+    await page.locator('.catalog-option:visible').first().click();
+  }
+  await expect(page.locator('.grid-stack-item')).toHaveCount(5);
+  await expect(page.locator('.widget-chart canvas')).toHaveCount(4, { timeout: 120000 });
+  await expect(page.locator('.widget-overlay:visible')).toHaveCount(0, { timeout: 120000 });
+  const rfm = page.locator('.grid-stack-item').filter({ hasText: 'RFM-сегменты пользователей' });
+  await expect(rfm.locator('tbody tr')).toHaveCount(21);
+  await expect(rfm.locator('.cell-bar').first()).toHaveAttribute('data-bar-index', '0');
+  await expect(rfm.locator('td.cell-bar').first()).toHaveCSS('background-image', /linear-gradient/);
+  const donut = page.locator('.grid-stack-item').filter({ hasText: 'Доля просмотров оригиналов' });
+  await expect(donut.locator('canvas')).toHaveCount(1);
+  const scatter = page.locator('.grid-stack-item').filter({ hasText: 'Стоимость часа по тайтлам' });
+  await expect(scatter.locator('canvas')).toHaveCount(1);
+  await page.locator('#edit-btn').click();
+  await expect(page.locator('.widget-grip').first()).toBeHidden();
 });

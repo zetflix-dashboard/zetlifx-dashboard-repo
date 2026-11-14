@@ -1,0 +1,14 @@
+{
+  "id": "C14",
+  "title": "Стоимость часа по тайтлам",
+  "question": "Как стоимость часа подписочного просмотра зависит от числа просмотренных часов у каждого тайтла?",
+  "dataset": "titleCostPerHour",
+  "template": "scatter",
+  "dimension": "hours",
+  "series": [
+    {
+      "field": "cost_per_hour"
+    }
+  ],
+  "pointLabel": "title"
+}

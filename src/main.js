@@ -27,7 +27,9 @@ try {
 } catch {
   /* blocked storage remains explicit in UI */
 }
-const loaded = loadWorkspace(createWorkspace(ChartRegistry.list()), known, storage);
+// Keep the existing starter layout lightweight; newly added charts enter via the catalogue.
+const starter = ChartRegistry.list().filter((chart) => ['C03', 'C18'].includes(chart.id));
+const loaded = loadWorkspace(createWorkspace(starter), known, storage);
 const store = new WorkspaceStore(loaded.state, known);
 let recovery = Boolean(loaded.recovery);
 let editing = false;
@@ -69,7 +71,7 @@ function flush() {
   } catch {
     byId('save-state').textContent = 'Не сохранено';
     message(
-      'Сохранение в браузере недоступно. Экспортируйте пространства через «Ещё», чтобы не потерять изменения.',
+      'Сохранение в браузере недоступно. Экспортируйте пространства через меню действий, чтобы не потерять изменения.',
     );
   }
 }
@@ -238,7 +240,7 @@ for (const chart of ChartRegistry.list()) {
   button.dataset.search = (chart.id + ' ' + chart.title).toLocaleLowerCase('ru-RU');
   button.addEventListener('click', () => {
     if (grid.count() >= 100) {
-      message('В пространстве допускается до 100 карточек. Создайте ещё одно.');
+      message('В пространстве допускается до 100 карточек. Создайте другое пространство.');
       byId('catalog').close();
       return;
     }

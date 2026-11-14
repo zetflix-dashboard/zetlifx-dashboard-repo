@@ -74,8 +74,26 @@ export class GridManager {
     const content = element('div', 'grid-stack-item-content');
     const head = element('div', 'widget-head');
     const titles = element('div', 'widget-titles');
+    const titleRow = element('div', 'widget-title-row');
+    titleRow.append(element('h3', '', definition.title));
+    const info = element('details', 'widget-info');
+    const summary = element('summary');
+    summary.append(createIcon('info'));
+    summary.title = 'О данных';
+    summary.setAttribute('aria-label', 'О данных: ' + definition.title);
+    const description = element(
+      'p',
+      '',
+      definition.question +
+        ' ' +
+        datasets[definition.dataset].limitation +
+        ' Фильтры: ' +
+        (datasets[definition.dataset].filters.length ? 'период.' : 'общий период не применяется.'),
+    );
+    info.append(summary, description);
+    titleRow.append(info);
     titles.append(
-      element('h3', '', definition.title),
+      titleRow,
       element('p', '', definition.id + ' · ' + datasets[definition.dataset].label),
     );
     const actions = element('div', 'widget-actions');
@@ -123,15 +141,7 @@ export class GridManager {
       table.textContent = active ? 'График' : 'Таблица';
       table.setAttribute('aria-pressed', String(active));
     });
-    const info = element('details', 'widget-info');
-    const summary = element('summary', '', 'О данных');
-    const description = element(
-      'p',
-      '',
-      definition.question + ' ' + datasets[definition.dataset].limitation + ' Фильтр: период.',
-    );
-    info.append(summary, description);
-    actions.append(table, info, grip, remove);
+    actions.append(table, grip, remove);
     head.append(titles, actions);
     const plot = element('div', 'widget-plot');
     content.append(head, plot);

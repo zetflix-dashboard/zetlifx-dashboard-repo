@@ -1,0 +1,24 @@
+{
+  "id": "C20",
+  "title": "RFM-сегменты пользователей",
+  "question": "Как распределены прямые платящие пользователи по RFM и их доле успешных платежей?",
+  "dataset": "rfmSnapshot",
+  "template": "table",
+  "columns": [
+    "segment",
+    "recency_score",
+    "frequency_score",
+    "monetary_score",
+    "users",
+    "revenue",
+    "share_pct"
+  ],
+  "columnBars": [
+    "recency_score",
+    "frequency_score",
+    "monetary_score",
+    "users",
+    "revenue",
+    "share_pct"
+  ]
+}

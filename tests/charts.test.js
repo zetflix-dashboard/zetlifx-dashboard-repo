@@ -75,3 +75,52 @@ test('result validation catches schema drift, non-numbers and oversized result s
   assert.throws(() => validateRows([{ ...row, net_revenue: Infinity }], base));
   assert.throws(() => validateRows(Array(5001).fill(row), base));
 });
+
+test('C14, C15 and C20 use the shared declarative contract', () => {
+  const ids = ['C14-cost-scatter', 'C15-original-share', 'C20-rfm'];
+  for (const id of ids) {
+    const chart = JSON.parse(
+      readFileSync(new URL('../src/charts/' + id + '/chart.json', import.meta.url)),
+    );
+    assert.equal(validateChart(chart).id, id.slice(0, 3));
+    if (chart.id === 'C15') {
+      const option = buildOption(
+        chart,
+        [
+          { origin: 'Оригинал', hours: 75 },
+          { origin: 'Лицензия', hours: 25 },
+        ],
+        true,
+      );
+      assert.equal(option.series[0].type, 'pie');
+      assert.deepEqual(
+        option.series[0].data.map((d) => d.value),
+        [75, 25],
+      );
+    }
+    if (chart.id === 'C14') {
+      const option = buildOption(
+        chart,
+        [{ title: 'Тестовый тайтл', hours: 200, cost_per_hour: 35 }],
+        true,
+      );
+      assert.equal(option.series[0].data[0].name, 'Тестовый тайтл');
+      assert.deepEqual(option.series[0].data[0].value, [200, 35]);
+    }
+    if (chart.id === 'C20') {
+      assert.ok(chart.columnBars.every((field) => chart.columns.includes(field)));
+      assert.throws(() => validateChart({ ...chart, columnBars: ['segment'] }));
+    }
+  }
+});
+test('donut and scatter reject invalid categories or extra executable fields', () => {
+  const pie = JSON.parse(
+    readFileSync(new URL('../src/charts/C15-original-share/chart.json', import.meta.url)),
+  );
+  const scatter = JSON.parse(
+    readFileSync(new URL('../src/charts/C14-cost-scatter/chart.json', import.meta.url)),
+  );
+  assert.throws(() => validateChart({ ...pie, dimension: 'hours' }));
+  assert.throws(() => validateChart({ ...scatter, pointLabel: 'hours' }));
+  assert.throws(() => validateChart({ ...pie, options: { color: 'red' } }));
+});

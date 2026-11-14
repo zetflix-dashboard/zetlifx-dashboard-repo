@@ -1,5 +1,5 @@
 import * as echarts from 'echarts/core';
-import { LineChart, BarChart, ScatterChart } from 'echarts/charts';
+import { LineChart, BarChart, ScatterChart, PieChart } from 'echarts/charts';
 import {
   GridComponent,
   TooltipComponent,
@@ -16,6 +16,7 @@ echarts.use([
   LineChart,
   BarChart,
   ScatterChart,
+  PieChart,
   GridComponent,
   TooltipComponent,
   LegendComponent,
@@ -93,7 +94,7 @@ export class ChartManager {
       const rows = await this.data.query(
         dataset.sources,
         dataset.sql,
-        dateRange(this.filters.get()),
+        dataset.filters.includes('period') ? dateRange(this.filters.get()) : [],
         controller.signal,
       );
       if (this.sessions.get(id) !== s || request !== s.request) return;
@@ -134,7 +135,9 @@ export class ChartManager {
     }
   }
   refreshAll() {
-    for (const id of this.sessions.keys()) void this.refreshOne(id);
+    for (const [id, session] of this.sessions) {
+      if (datasets[session.definition.dataset].filters.includes('period')) void this.refreshOne(id);
+    }
   }
   resizeAll() {
     for (const s of this.sessions.values()) s.chart?.resize();
