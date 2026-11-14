@@ -206,7 +206,9 @@ test('month range picker supports presets, cancel, and responsive layout', async
   await trigger.click();
   await page.keyboard.press('Escape');
   await expect(page.locator('#period-panel')).toBeHidden();
-  await page.locator('#filters-reset').click();
+  await trigger.click();
+  await page.locator('[data-period-preset="all"]').click();
+  await page.locator('#period-apply').click();
   await expect(trigger).toContainText('2024');
   await expect(trigger).toContainText('2025');
   await page.setViewportSize({ width: 390, height: 844 });
