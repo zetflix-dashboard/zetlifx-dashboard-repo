@@ -30,6 +30,39 @@ export function buildOption(definition, rows, reducedMotion = false, theme = cha
   const fields = datasets[definition.dataset].fields;
   const units = [...new Set(definition.series.map((s) => fields[s.field].unit))];
   const scatter = definition.template === 'scatter';
+  if (definition.template === 'pie') {
+    const metric = definition.series[0].field;
+    const unit = fields[metric].unit;
+    return {
+      backgroundColor: 'transparent',
+      color: theme.palette,
+      animation: !reducedMotion,
+      aria: { enabled: true, description: definition.question, decal: { show: true } },
+      textStyle: { color: theme.text, fontFamily: 'Inter, system-ui, sans-serif' },
+      tooltip: {
+        trigger: 'item',
+        renderMode: 'richText',
+        confine: true,
+        backgroundColor: theme.tooltip,
+        borderColor: theme.border,
+        textStyle: { color: theme.tooltipText },
+        valueFormatter: (value) => formatValue(value, unit),
+      },
+      legend: { bottom: 2, textStyle: { color: theme.text } },
+      series: [{
+        name: fields[metric].label,
+        type: 'pie',
+        radius: ['45%', '71%'],
+        center: ['50%', '44%'],
+        label: { show: true, formatter: '{d}%', color: theme.text },
+        itemStyle: { borderColor: theme.tooltip, borderWidth: 2 },
+        data: rows.map((row) => ({
+          name: String(row[definition.dimension]),
+          value: Number(row[metric]),
+        })),
+      }],
+    };
+  }
   return {
     backgroundColor: 'transparent',
     color: theme.palette,
@@ -89,7 +122,10 @@ export function buildOption(definition, rows, reducedMotion = false, theme = cha
         data: rows.map((r) => {
           const y = r[series.field] == null ? null : Number(r[series.field]);
           return scatter
-            ? [r[definition.dimension] == null ? null : Number(r[definition.dimension]), y]
+            ? {
+                name: definition.pointLabel ? String(r[definition.pointLabel]) : fields[series.field].label,
+                value: [r[definition.dimension] == null ? null : Number(r[definition.dimension]), y],
+              }
             : y;
         }),
         smooth: false,
@@ -131,6 +167,8 @@ export function renderTable(container, definition, rows) {
     th.textContent = fields[field].label;
     header.append(th);
   }
+  const bars = definition.columnBars || [];
+  const maxima = new Map(bars.map((field) => [field, Math.max(0, ...rows.map((row) => Number(row[field]) || 0))]));
   const body = table.createTBody();
   for (const row of rows) {
     const tr = body.insertRow();
@@ -138,6 +176,14 @@ export function renderTable(container, definition, rows) {
       const cell = tr.insertCell();
       cell.textContent = formatValue(row[field], fields[field].unit);
       if (!['month', 'text'].includes(fields[field].unit)) cell.className = 'numeric';
+      if (bars.includes(field)) {
+        const max = maxima.get(field);
+        const value = Number(row[field]);
+        const width = max && Number.isFinite(value) ? Math.min(100, Math.max(0, value / max * 100)) : 0;
+        cell.classList.add('cell-bar');
+        cell.dataset.barIndex = String(bars.indexOf(field));
+        cell.style.setProperty('--bar-width', width + '%');
+      }
     }
   }
   container.replaceChildren(table);
