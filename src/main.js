@@ -69,7 +69,7 @@ function flush() {
   } catch {
     byId('save-state').textContent = 'Не сохранено';
     message(
-      'Сохранение в браузере недоступно. Экспортируйте пространства через «Ещё», чтобы не потерять изменения.',
+      'Сохранение в браузере недоступно. Экспортируйте пространства через меню действий, чтобы не потерять изменения.',
     );
   }
 }
@@ -238,7 +238,7 @@ for (const chart of ChartRegistry.list()) {
   button.dataset.search = (chart.id + ' ' + chart.title).toLocaleLowerCase('ru-RU');
   button.addEventListener('click', () => {
     if (grid.count() >= 100) {
-      message('В пространстве допускается до 100 карточек. Создайте ещё одно.');
+      message('В пространстве допускается до 100 карточек. Создайте другое пространство.');
       byId('catalog').close();
       return;
     }
