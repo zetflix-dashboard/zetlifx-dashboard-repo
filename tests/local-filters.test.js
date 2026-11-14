@@ -102,3 +102,23 @@ test('invalid heading shape or tampered local filters are rejected', () => {
   ])
     assert.throws(() => validateLayout({ ...base, widgets: [widget] }, known));
 });
+
+test('C03 quarter whitelist keeps its global period and rejects injected values', () => {
+  const c03 = {
+    id: 'C03',
+    title: 'Финансы',
+    question: 'По месяцам?',
+    dataset: 'financialMonthly',
+    template: 'combo',
+    dimension: 'period',
+    series: [{ field: 'net_revenue', type: 'bar' }],
+    localFilters: ['quarter'],
+  };
+  assert.equal(availableLocalFilters(c03).length, 1);
+  assert.deepEqual(datasetQueryParams(c03, { periodFrom: '2024-01', periodTo: '2025-12' }, { quarter: '1' }), ['2024-01-01', '2025-12-01', '1']);
+  assert.deepEqual(datasetQueryParams(c03, { periodFrom: '2024-01', periodTo: '2025-12' }, {}), ['2024-01-01', '2025-12-01', 'all']);
+  assert.equal(datasets.financialMonthly.sql.split('?').length - 1, 3);
+  assert.throws(() => validateLocalFilters(c03, { quarter: '1 OR TRUE' }));
+  assert.throws(() => validateLocalFilters(c03, { quarter: '5' }));
+  assert.doesNotThrow(() => validateChart(c03));
+});
