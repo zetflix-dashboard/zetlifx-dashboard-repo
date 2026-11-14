@@ -193,14 +193,6 @@ button:disabled {
   color: #ffffff;
   font-size: 18px;
 }
-.brand-caption {
-  font-weight: 400;
-  font-size: 13px;
-  color: var(--muted);
-  margin-left: 9px;
-  border-left: 1px solid var(--line);
-  padding-left: 18px;
-}
 .top-actions {
   display: flex;
   align-items: center;
@@ -336,11 +328,6 @@ main {
   font-weight: 550;
   text-align: center;
   font-variant-numeric: tabular-nums;
-}
-#filters-reset {
-  color: var(--muted);
-  background: transparent;
-  border-color: transparent;
 }
 .period-popover {
   position: absolute;
@@ -816,10 +803,7 @@ dialog label {
   .editor-bar > span {
     display: none;
   }
-  .brand-caption {
-    display: none;
-  }
-  #save-state {
+    #save-state {
     display: none;
   }
   .topbar {
