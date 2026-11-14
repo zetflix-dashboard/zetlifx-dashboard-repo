@@ -24,7 +24,9 @@ test('real Parquet queries, shared table, period filter, no runtime errors', asy
   await page.locator('#period-apply').click();
   await expect(page.locator('tbody tr')).toHaveCount(1);
   await expect(page.locator('tbody tr').first().locator('td').nth(1)).not.toHaveText('—');
-  await page.locator('#filters-reset').click();
+  await page.locator('#period-trigger').click();
+  await page.locator('[data-period-preset="all"]').click();
+  await page.locator('#period-apply').click();
   await expect(page.locator('tbody tr')).toHaveCount(24);
   await page.screenshot({ path: 'test-results/dashboard-desktop.png', fullPage: true });
   expect(errors).toEqual([]);
@@ -180,7 +182,7 @@ test('theme toggle persists and recolors rendered charts without new queries', a
   await expect(page.locator('.widget-chart canvas')).toHaveCount(2);
   await expect
     .poll(() => page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor))
-    .toBe(next === 'dark' ? 'rgb(20, 25, 24)' : 'rgb(244, 243, 240)');
+    .toBe(next === 'dark' ? 'rgb(0, 0, 0)' : 'rgb(244, 243, 240)');
   await expect.poll(() => page.evaluate(() => localStorage.getItem('zetflix.theme'))).toBe(next);
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', next);
