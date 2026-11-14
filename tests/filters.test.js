@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import { FilterStore, dateRange, validateFilters } from '../src/shared/filters/FilterStore.js';
 
 test('dates are always the first day of a month', () => {
-  assert.deepEqual(dateRange({ periodFrom: '2024-02', periodTo: '2025-08' }), ['2024-02-01', '2025-08-01']);
+  assert.deepEqual(dateRange({ periodFrom: '2024-02', periodTo: '2025-08' }), [
+    '2024-02-01',
+    '2025-08-01',
+  ]);
 });
 test('reversed or out-of-range periods are rejected', () => {
   assert.throws(() => validateFilters({ periodFrom: '2025-09', periodTo: '2024-01' }), /Период/);

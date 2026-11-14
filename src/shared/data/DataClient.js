@@ -65,7 +65,12 @@ export class DataClient {
   query(files, sql, params = [], signal) {
     if (this.closed) return Promise.reject(new Error('Data client is closed'));
     if (signal?.aborted) return Promise.reject(new DOMException('Query superseded', 'AbortError'));
-    const key = JSON.stringify([files, sql, params, import.meta.env.VITE_DATA_VERSION || 'snapshot-2025']);
+    const key = JSON.stringify([
+      files,
+      sql,
+      params,
+      import.meta.env.VITE_DATA_VERSION || 'snapshot-2025',
+    ]);
     if (this.cache.has(key)) return Promise.resolve(this.cache.get(key));
     const run = async () => {
       if (signal?.aborted) throw new DOMException('Query superseded', 'AbortError');
@@ -96,13 +101,19 @@ export class DataClient {
     return pending;
   }
 
-  clearCache() { this.cache.clear(); }
+  clearCache() {
+    this.cache.clear();
+  }
 
   async dispose() {
     this.closed = true;
     await this.tail;
     if (this.starting) {
-      try { await this.starting; } catch { /* failed initialization */ }
+      try {
+        await this.starting;
+      } catch {
+        /* failed initialization */
+      }
     }
     if (this.conn) await this.conn.close();
     if (this.db) await this.db.terminate();

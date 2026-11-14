@@ -1,5 +1,9 @@
 const number = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 });
-const money = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 });
+const money = new Intl.NumberFormat('ru-RU', {
+  style: 'currency',
+  currency: 'RUB',
+  maximumFractionDigits: 0,
+});
 const compact = new Intl.NumberFormat('ru-RU', { notation: 'compact', maximumFractionDigits: 1 });
 export function monthLabel(value) {
   const parts = String(value).slice(0, 7).split('-');
@@ -14,5 +18,5 @@ export function formatValue(value, unit = 'number', short = false) {
   if (short) return compact.format(n) + (unit === 'percent' ? '%' : unit === 'rub' ? ' ₽' : '');
   return unit === 'rub' ? money.format(n) : number.format(n) + (unit === 'percent' ? '%' : '');
 }
-export const formatRubles = v => formatValue(v, 'rub');
-export const formatPercent = v => formatValue(v, 'percent');
+export const formatRubles = (v) => formatValue(v, 'rub');
+export const formatPercent = (v) => formatValue(v, 'percent');

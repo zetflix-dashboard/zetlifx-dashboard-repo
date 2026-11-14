@@ -19,19 +19,25 @@ export class GridManager {
     this.silent = false;
     this.editing = false;
 
-    this.grid = GridStack.init({
-      column: 12,
-      cellHeight: 76,
-      margin: 6,
-      animate: true,
-      staticGrid: true,
-      draggable: { handle: '.widget-grip', scroll: true },
-      resizable: { handles: 'se' },
-      columnOpts: {
-        breakpoints: [{ w: 660, c: 1 }, { w: 1100, c: 6 }],
-        layout: 'list'
-      }
-    }, container);
+    this.grid = GridStack.init(
+      {
+        column: 12,
+        cellHeight: 76,
+        margin: 6,
+        animate: true,
+        staticGrid: true,
+        draggable: { handle: '.widget-grip', scroll: true },
+        resizable: { handles: 'se' },
+        columnOpts: {
+          breakpoints: [
+            { w: 660, c: 1 },
+            { w: 1100, c: 6 },
+          ],
+          layout: 'list',
+        },
+      },
+      container,
+    );
     this.grid.on('dragstop resizestop', () => {
       if (!this.silent) this.onChange(this.getLayout());
       this.charts.resizeAll();
@@ -55,21 +61,36 @@ export class GridManager {
     const content = element('div', 'grid-stack-item-content');
     const head = element('div', 'widget-head');
     const titles = element('div', 'widget-titles');
-    titles.append(element('h3', '', definition.title), element('p', '', definition.id + ' · ' + datasets[definition.dataset].label));
+    titles.append(
+      element('h3', '', definition.title),
+      element('p', '', definition.id + ' · ' + datasets[definition.dataset].label),
+    );
     const actions = element('div', 'widget-actions');
     const grip = element('button', 'widget-grip', 'Переместить');
     grip.type = 'button';
     grip.title = 'Перетащите или используйте стрелки; Shift + стрелки меняют размер';
-    grip.addEventListener('keydown', event => {
-      if (!this.editing || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+    grip.addEventListener('keydown', (event) => {
+      if (!this.editing || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key))
+        return;
       event.preventDefault();
-      const n = item.gridstackNode; const horizontal = ['ArrowLeft', 'ArrowRight'].includes(event.key);
+      const n = item.gridstackNode;
+      const horizontal = ['ArrowLeft', 'ArrowRight'].includes(event.key);
       const delta = ['ArrowLeft', 'ArrowUp'].includes(event.key) ? -1 : 1;
       const column = this.grid.getColumn();
       const patch = event.shiftKey
-        ? horizontal ? { w: Math.max(Math.min(definition.minSize.w, column), Math.min(column - n.x, n.w + delta)) } : { h: Math.max(definition.minSize.h, Math.min(20, n.h + delta)) }
-        : horizontal ? { x: Math.max(0, Math.min(column - n.w, n.x + delta)) } : { y: Math.max(0, Math.min(1000, n.y + delta)) };
-      this.grid.update(item, patch); this.onChange(this.getLayout());
+        ? horizontal
+          ? {
+              w: Math.max(
+                Math.min(definition.minSize.w, column),
+                Math.min(column - n.x, n.w + delta),
+              ),
+            }
+          : { h: Math.max(definition.minSize.h, Math.min(20, n.h + delta)) }
+        : horizontal
+          ? { x: Math.max(0, Math.min(column - n.w, n.x + delta)) }
+          : { y: Math.max(0, Math.min(1000, n.y + delta)) };
+      this.grid.update(item, patch);
+      this.onChange(this.getLayout());
     });
     grip.setAttribute('aria-label', 'Перетащить ' + definition.title);
     const remove = element('button', 'widget-remove', '×');
@@ -78,12 +99,22 @@ export class GridManager {
     remove.setAttribute('aria-label', 'Убрать ' + definition.title);
     remove.addEventListener('click', () => this.removeOne(widget.instanceId));
     const table = element('button', 'widget-table', 'Таблица');
-    table.type = 'button'; table.setAttribute('aria-label', 'Показать таблицу: ' + definition.title); table.setAttribute('aria-pressed', 'false');
+    table.type = 'button';
+    table.setAttribute('aria-label', 'Показать таблицу: ' + definition.title);
+    table.setAttribute('aria-pressed', 'false');
     table.hidden = definition.template === 'table';
-    table.addEventListener('click', () => { const active = this.charts.toggleTable(widget.instanceId); table.textContent = active ? 'График' : 'Таблица'; table.setAttribute('aria-pressed', String(active)); });
+    table.addEventListener('click', () => {
+      const active = this.charts.toggleTable(widget.instanceId);
+      table.textContent = active ? 'График' : 'Таблица';
+      table.setAttribute('aria-pressed', String(active));
+    });
     const info = element('details', 'widget-info');
     const summary = element('summary', '', 'О данных');
-    const description = element('p', '', definition.question + ' ' + datasets[definition.dataset].limitation + ' Фильтр: период.');
+    const description = element(
+      'p',
+      '',
+      definition.question + ' ' + datasets[definition.dataset].limitation + ' Фильтр: период.',
+    );
     info.append(summary, description);
     actions.append(table, info, grip, remove);
     head.append(titles, actions);
@@ -93,9 +124,13 @@ export class GridManager {
     this.container.append(item);
 
     this.grid.makeWidget(item, {
-      id: widget.instanceId, x: widget.x, y: widget.y,
-      w: widget.w, h: widget.h,
-      minW: definition.minSize.w, minH: definition.minSize.h
+      id: widget.instanceId,
+      x: widget.x,
+      y: widget.y,
+      w: widget.w,
+      h: widget.h,
+      minW: definition.minSize.w,
+      minH: definition.minSize.h,
     });
     this.items.set(widget.instanceId, { item, chartId: widget.chartId });
     this.charts.mount(widget.instanceId, widget.chartId, plot);
@@ -136,14 +171,18 @@ export class GridManager {
         x: node.x || 0,
         y: node.y || 0,
         w: node.w || 1,
-        h: node.h || 1
+        h: node.h || 1,
       };
     });
     return { version: LAYOUT_VERSION, dashboardId: 'current', title: 'Пространство', widgets };
   }
 
-  getNextRow() { return this.grid.getRow(); }
-  count() { return this.items.size; }
+  getNextRow() {
+    return this.grid.getRow();
+  }
+  count() {
+    return this.items.size;
+  }
 
   dispose() {
     for (const id of Array.from(this.items.keys())) this.charts.disposeOne(id);

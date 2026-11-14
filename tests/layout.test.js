@@ -5,7 +5,7 @@ import { validateLayout, LAYOUT_VERSION } from '../src/layout/LayoutStorage.js';
 const fixture = () => ({
   version: LAYOUT_VERSION,
   dashboardId: 'overview',
-  widgets: [{ instanceId: 'one', chartId: 'C03', x: 0, y: 0, w: 6, h: 4 }]
+  widgets: [{ instanceId: 'one', chartId: 'C03', x: 0, y: 0, w: 6, h: 4 }],
 });
 const known = (id) => ['C03', 'C18'].includes(id);
 

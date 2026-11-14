@@ -1,28 +1,112 @@
 <!doctype html>
 <html lang="ru">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="theme-color" content="#f6f7f9"><title>Зетфликс — аналитика</title></head>
-<body>
-<a class="skip-link" href="#workspace-panel">К графикам</a>
-<header class="topbar">
-  <a class="brand" href="./" aria-label="Зетфликс, главная"><span class="brand-mark" aria-hidden="true">Z</span>Зетфликс <span class="brand-caption">Аналитика</span></a>
-  <div class="top-actions"><span id="save-state" role="status"></span><button id="edit-btn" aria-pressed="false">Настроить</button><details class="app-menu"><summary aria-label="Действия с пространствами">Ещё</summary><div class="menu-content">
-    <button id="rename-space">Переименовать</button><button id="export-btn">Экспорт пространств</button><button id="import-btn">Импорт пространств</button><button id="delete-space" class="danger">Удалить пространство</button>
-  </div></details><input type="file" id="import-file" accept="application/json,.json" hidden></div>
-</header>
-<main>
-  <div class="workspace-toolbar">
-    <nav class="space-navigation" aria-label="Пространства"><div id="space-tabs" role="tablist" aria-label="Пространства"></div><button id="create-space" class="add-space" aria-label="Создать пространство" title="Создать пространство">+</button></nav>
-    <div class="period-controls" role="group" aria-label="Период анализа"><label for="period-from">Период</label><select id="period-from" aria-label="Начало периода"></select><span aria-hidden="true">—</span><select id="period-to" aria-label="Конец периода"></select><button id="filters-reset" title="Сбросить период">Сбросить</button></div>
-  </div>
-  <div id="editor-bar" class="editor-bar" hidden><div><button id="add-btn" class="primary">Добавить график</button><button id="undo-btn">Отменить</button><button id="redo-btn">Повторить</button></div><span>Перетаскивайте карточки · стрелки на кнопке «Переместить», Shift — размер</span></div>
-  <p id="message" class="message" role="status" aria-live="polite" hidden></p>
-  <section id="workspace-panel" role="tabpanel" tabindex="0">
-    <div id="dashboard-grid" class="grid-stack"></div>
-    <div id="empty-layout" class="empty-state" hidden><span class="empty-mark" aria-hidden="true">Z</span><h1 id="empty-title">Пространство для ваших данных</h1><p id="empty-description">Добавьте графики из каталога. Макет можно менять в любой момент.</p><button id="empty-action" class="primary">Добавить график</button></div>
-  </section>
-</main>
-<dialog id="catalog"><form method="dialog" class="dialog-heading"><div><h2>Добавить график</h2><p>Выберите визуализацию для этого пространства</p></div><button aria-label="Закрыть каталог">×</button></form><input id="catalog-search" type="search" placeholder="Поиск по названию или C-ID" aria-label="Найти график"><div id="catalog-items"></div><p id="catalog-empty" hidden>Графики не найдены.</p></dialog>
-<dialog id="space-dialog"><form id="space-form"><h2 id="space-dialog-title">Новое пространство</h2><label for="space-name">Название</label><input id="space-name" maxlength="80" required autocomplete="off"><div class="dialog-actions"><button id="cancel-space" type="button">Отмена</button><button class="primary" type="submit">Сохранить</button></div></form></dialog>
-<dialog id="confirm-dialog"><form method="dialog"><h2 id="confirm-title"></h2><p id="confirm-text"></p><div class="dialog-actions"><button value="cancel">Отмена</button><button value="confirm" class="danger">Продолжить</button></div></form></dialog>
-<script type="module" src="/src/main.js"></script>
-</body></html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f6f7f9" />
+    <title>Зетфликс — аналитика</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#workspace-panel">К графикам</a>
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="Зетфликс, главная"
+        ><span class="brand-mark" aria-hidden="true">Z</span>Зетфликс
+        <span class="brand-caption">Аналитика</span></a
+      >
+      <div class="top-actions">
+        <span id="save-state" role="status"></span
+        ><button id="edit-btn" aria-pressed="false">Настроить</button>
+        <details class="app-menu">
+          <summary aria-label="Действия с пространствами">Ещё</summary>
+          <div class="menu-content">
+            <button id="rename-space">Переименовать</button
+            ><button id="export-btn">Экспорт пространств</button
+            ><button id="import-btn">Импорт пространств</button
+            ><button id="delete-space" class="danger">Удалить пространство</button>
+          </div>
+        </details>
+        <input type="file" id="import-file" accept="application/json,.json" hidden />
+      </div>
+    </header>
+    <main>
+      <div class="workspace-toolbar">
+        <nav class="space-navigation" aria-label="Пространства">
+          <div id="space-tabs" role="tablist" aria-label="Пространства"></div>
+          <button
+            id="create-space"
+            class="add-space"
+            aria-label="Создать пространство"
+            title="Создать пространство"
+          >
+            +
+          </button>
+        </nav>
+        <div class="period-controls" role="group" aria-label="Период анализа">
+          <label for="period-from">Период</label
+          ><select id="period-from" aria-label="Начало периода"></select
+          ><span aria-hidden="true">—</span
+          ><select id="period-to" aria-label="Конец периода"></select
+          ><button id="filters-reset" title="Сбросить период">Сбросить</button>
+        </div>
+      </div>
+      <div id="editor-bar" class="editor-bar" hidden>
+        <div>
+          <button id="add-btn" class="primary">Добавить график</button
+          ><button id="undo-btn">Отменить</button><button id="redo-btn">Повторить</button>
+        </div>
+        <span>Перетаскивайте карточки · стрелки на кнопке «Переместить», Shift — размер</span>
+      </div>
+      <p id="message" class="message" role="status" aria-live="polite" hidden></p>
+      <section id="workspace-panel" role="tabpanel" tabindex="0">
+        <div id="dashboard-grid" class="grid-stack"></div>
+        <div id="empty-layout" class="empty-state" hidden>
+          <span class="empty-mark" aria-hidden="true">Z</span>
+          <h1 id="empty-title">Пространство для ваших данных</h1>
+          <p id="empty-description">
+            Добавьте графики из каталога. Макет можно менять в любой момент.
+          </p>
+          <button id="empty-action" class="primary">Добавить график</button>
+        </div>
+      </section>
+    </main>
+    <dialog id="catalog">
+      <form method="dialog" class="dialog-heading">
+        <div>
+          <h2>Добавить график</h2>
+          <p>Выберите визуализацию для этого пространства</p>
+        </div>
+        <button aria-label="Закрыть каталог">×</button>
+      </form>
+      <input
+        id="catalog-search"
+        type="search"
+        placeholder="Поиск по названию или C-ID"
+        aria-label="Найти график"
+      />
+      <div id="catalog-items"></div>
+      <p id="catalog-empty" hidden>Графики не найдены.</p>
+    </dialog>
+    <dialog id="space-dialog">
+      <form id="space-form">
+        <h2 id="space-dialog-title">Новое пространство</h2>
+        <label for="space-name">Название</label
+        ><input id="space-name" maxlength="80" required autocomplete="off" />
+        <div class="dialog-actions">
+          <button id="cancel-space" type="button">Отмена</button
+          ><button class="primary" type="submit">Сохранить</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="confirm-dialog">
+      <form method="dialog">
+        <h2 id="confirm-title"></h2>
+        <p id="confirm-text"></p>
+        <div class="dialog-actions">
+          <button value="cancel">Отмена</button
+          ><button value="confirm" class="danger">Продолжить</button>
+        </div>
+      </form>
+    </dialog>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
