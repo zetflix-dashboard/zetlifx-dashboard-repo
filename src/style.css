@@ -803,7 +803,7 @@ dialog label {
   .editor-bar > span {
     display: none;
   }
-    #save-state {
+  #save-state {
     display: none;
   }
   .topbar {
