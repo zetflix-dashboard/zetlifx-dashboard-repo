@@ -114,7 +114,10 @@ export class GridManager {
     const head = element('div', 'widget-head');
     const titles = element('div', 'widget-titles');
     const titleRow = element('div', 'widget-title-row');
-    titleRow.append(element('h3', '', definition.title));
+    titleRow.append(
+      element('h3', '', definition.title),
+      element('span', 'widget-chart-id', '· ' + definition.id),
+    );
     const info = element('details', 'widget-info');
     const summary = element('summary');
     summary.append(createIcon('info'));
@@ -131,10 +134,7 @@ export class GridManager {
     );
     info.append(summary, description);
     titleRow.append(info);
-    titles.append(
-      titleRow,
-      element('p', '', definition.id + ' · ' + datasets[definition.dataset].label),
-    );
+    titles.append(titleRow);
     const actions = element('div', 'widget-actions');
     const grip = element('button', 'widget-grip');
     grip.type = 'button';

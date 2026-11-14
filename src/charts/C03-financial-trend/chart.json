@@ -18,5 +18,6 @@
       "field": "margin_pct",
       "type": "line"
     }
-  ]
+  ],
+  "localFilters": ["quarter"]
 }

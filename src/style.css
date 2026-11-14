@@ -477,6 +477,16 @@ body:has(.editor-bar:not([hidden])) main {
 .widget-title-row h3 {
   min-width: 0;
 }
+.widget-chart-id {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0;
+  white-space: nowrap;
+  opacity: 0.78;
+  flex: 0 0 auto;
+}
 .widget-info {
   position: relative;
   flex: 0 0 auto;
@@ -532,12 +542,7 @@ body:has(.editor-bar:not([hidden])) main {
   font-weight: 600;
   line-height: 1.4;
 }
-.widget-titles p {
-  margin: 4px 0 0;
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.4;
-}
+
 .widget-actions {
   display: flex;
   align-items: center;
