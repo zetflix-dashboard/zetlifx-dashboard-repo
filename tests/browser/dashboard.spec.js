@@ -223,15 +223,19 @@ test('OLED appearance and compact read-only widget actions', async ({ page }) =>
   const dark = await page.locator('html').getAttribute('data-theme');
   if (dark !== 'dark') await page.locator('#theme-toggle').click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await expect.poll(() => page.evaluate(() =>
-    getComputedStyle(document.documentElement).backgroundColor)).toBe('rgb(0, 0, 0)');
+  await expect
+    .poll(() => page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor))
+    .toBe('rgb(0, 0, 0)');
   await expect(page.locator('.brand-caption')).toHaveCount(0);
   await expect(page.locator('#filters-reset')).toHaveCount(0);
   await expect(page.locator('.menu-trigger')).toContainText('···');
   await expect(page.locator('.widget-grip').first()).toBeHidden();
   await expect(page.locator('.widget-remove').first()).toBeHidden();
   await expect(page.locator('.widget-title-row .widget-info').first()).toBeVisible();
-  await expect(page.locator('.widget-info summary').first()).toHaveAttribute('aria-label', /О данных/);
+  await expect(page.locator('.widget-info summary').first()).toHaveAttribute(
+    'aria-label',
+    /О данных/,
+  );
   await page.locator('#edit-btn').click();
   await expect(page.locator('.widget-grip').first()).toBeVisible();
   await expect(page.locator('.widget-remove').first()).toBeVisible();
@@ -239,7 +243,9 @@ test('OLED appearance and compact read-only widget actions', async ({ page }) =>
   await expect(page.locator('.widget-grip').first()).toBeHidden();
 });
 
-test('C14 scatter, C15 donut and C20 RFM load with actual Parquet and data bars', async ({ page }) => {
+test('C14 scatter, C15 donut and C20 RFM load with actual Parquet and data bars', async ({
+  page,
+}) => {
   test.setTimeout(180000);
   await ready(page);
   await page.locator('#edit-btn').click();
