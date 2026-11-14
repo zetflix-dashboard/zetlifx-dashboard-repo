@@ -10,71 +10,71 @@
   font-synthesis: none;
   color: var(--ink);
   background: var(--page);
-  --page: #f6f7f9;
-  --surface: #ffffff;
-  --surface-muted: #f7f9fb;
-  --surface-hover: #edf2f8;
-  --ink: #1d2939;
-  --muted: #64748b;
-  --line: #e0e5ec;
-  --line-subtle: #edf0f4;
-  --accent: #285fa5;
-  --accent-hover: #1f4f8d;
+  --page: #f4f3f0;
+  --surface: #fdfcf9;
+  --surface-muted: #f3f2ee;
+  --surface-hover: #eeece6;
+  --ink: #242a2b;
+  --muted: #697370;
+  --line: #deded8;
+  --line-subtle: #e8e8e2;
+  --accent: #356c64;
+  --accent-hover: #29574f;
   --on-accent: #ffffff;
-  --danger: #a32d3c;
-  --focus-ring: #407bd0;
-  --brand-mark-bg: #203c59;
-  --editor-border: #cddbeb;
-  --editor-bg: #edf3f9;
-  --editor-ink: #4f6480;
-  --notice-bg: #eaf0f7;
-  --edit-card-border: #b4c9e1;
-  --empty-mark: #b7c4d2;
+  --danger: #9f5148;
+  --focus-ring: #528a80;
+  --brand-mark-bg: #253b38;
+  --editor-border: #d3ded9;
+  --editor-bg: #e9f0ed;
+  --editor-ink: #48635c;
+  --notice-bg: #e9edeb;
+  --edit-card-border: #9ab9af;
+  --empty-mark: #9da9a3;
   --popover-shadow: 0 8px 24px #172b4d12;
   --card-shadow: 0 2px 5px #14243a03;
   --dialog-shadow: 0 24px 80px #14243a26;
   --dialog-backdrop: #182b4359;
-  --chart-palette: #407bd0, #278775, #b67931, #8865af, #bf5760, #507d88;
-  --chart-text: #475569;
-  --chart-axis: #64748b;
-  --chart-grid: #e9edf2;
-  --chart-tooltip: #ffffff;
-  --chart-tooltip-text: #182333;
-  --chart-border: #dce2e9;
+  --chart-palette: #356c64, #a77c50, #72888a, #8a736d, #a05e52, #73836c;
+  --chart-text: #525d5b;
+  --chart-axis: #737d78;
+  --chart-grid: #e7e7e0;
+  --chart-tooltip: #fdfcf9;
+  --chart-tooltip-text: #242a2b;
+  --chart-border: #d9ded7;
 }
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --page: #101722;
-  --surface: #192331;
-  --surface-muted: #222f40;
-  --surface-hover: #2a394d;
-  --ink: #e7edf6;
-  --muted: #a7b9ce;
-  --line: #354559;
-  --line-subtle: #2c394b;
-  --accent: #79acf5;
-  --accent-hover: #93bdf8;
-  --on-accent: #122032;
-  --danger: #ff9aa7;
-  --focus-ring: #9bc9ff;
-  --brand-mark-bg: #253e5e;
-  --editor-border: #3c5474;
-  --editor-bg: #202e41;
-  --editor-ink: #b5c9e3;
-  --notice-bg: #25364a;
-  --edit-card-border: #55769b;
-  --empty-mark: #637b99;
+  --page: #141918;
+  --surface: #1e2523;
+  --surface-muted: #27302d;
+  --surface-hover: #303a36;
+  --ink: #e9e9e1;
+  --muted: #a7b3ab;
+  --line: #3a4540;
+  --line-subtle: #313c37;
+  --accent: #a0bfb0;
+  --accent-hover: #b8cfc0;
+  --on-accent: #17231e;
+  --danger: #d4a19a;
+  --focus-ring: #b4d5c3;
+  --brand-mark-bg: #40564b;
+  --editor-border: #52665b;
+  --editor-bg: #25312b;
+  --editor-ink: #b2c6b8;
+  --notice-bg: #29372f;
+  --edit-card-border: #758f80;
+  --empty-mark: #75867b;
   --popover-shadow: 0 8px 24px #05091180;
   --card-shadow: 0 2px 8px #05091132;
   --dialog-shadow: 0 24px 80px #050911aa;
   --dialog-backdrop: #050911aa;
-  --chart-palette: #83b5ff, #65d3bd, #f2bc75, #c7a2f6, #f598aa, #79cadb;
-  --chart-text: #b6c7da;
-  --chart-axis: #a7b9ce;
-  --chart-grid: #36485c;
-  --chart-tooltip: #263447;
-  --chart-tooltip-text: #eef4fc;
-  --chart-border: #465b72;
+  --chart-palette: #a0bfb0, #d3ac7e, #98b6b5, #c0a5a0, #c99082, #aeb99b;
+  --chart-text: #c4cdc5;
+  --chart-axis: #a6b4a9;
+  --chart-grid: #37453d;
+  --chart-tooltip: #29342e;
+  --chart-tooltip-text: #edf1e9;
+  --chart-border: #526359;
 }
 
 * {
@@ -100,9 +100,11 @@ input {
   border-radius: 7px;
   background: var(--surface);
   color: inherit;
-  min-height: 34px;
+  min-height: 36px;
   padding: 7px 11px;
   font-size: 13px;
+  line-height: 20px;
+  vertical-align: middle;
 }
 button:hover,
 summary:hover {
@@ -126,6 +128,7 @@ button:disabled {
 }
 .primary:hover {
   background: var(--accent-hover);
+  color: var(--on-accent);
 }
 .danger {
   color: var(--danger);
@@ -191,6 +194,18 @@ button:disabled {
   align-items: center;
   gap: 8px;
 }
+.top-actions > button,
+.top-actions > .app-menu > summary {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.top-actions > .app-menu > summary {
+  border: 1px solid transparent;
+  padding: 7px 11px;
+}
+
 #save-state {
   color: var(--muted);
   font-size: 11px;
@@ -231,7 +246,7 @@ summary::-webkit-details-marker {
   border: 1px solid var(--line);
   background: var(--surface);
   border-radius: 9px;
-  box-shadow: 0 8px 24px var(--popover-shadow);
+  box-shadow: var(--popover-shadow);
 }
 .menu-content button {
   display: block;
@@ -289,22 +304,106 @@ main {
 .period-controls {
   display: flex;
   align-items: center;
-  gap: 7px;
+  justify-content: flex-end;
+  gap: 8px;
   flex-shrink: 0;
+  min-width: 0;
 }
-.period-controls label {
+.period-caption {
   color: var(--muted);
   font-size: 12px;
-  margin-right: 4px;
 }
-.period-controls select {
-  min-width: 112px;
+.period-picker {
+  position: relative;
 }
-.period-controls button {
-  border: 0;
-  background: transparent;
+#period-trigger {
+  min-width: 225px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+#filters-reset {
   color: var(--muted);
+  background: transparent;
+  border-color: transparent;
+}
+.period-popover {
+  position: absolute;
+  z-index: 30;
+  right: 0;
+  top: calc(100% + 8px);
+  width: min(440px, calc(100vw - 24px));
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--popover-shadow);
+}
+.period-popover-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.period-popover-top strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+#period-step {
   font-size: 11px;
+  color: var(--muted);
+  text-align: right;
+}
+.period-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+.period-presets button {
+  flex: 1;
+  white-space: nowrap;
+  background: var(--surface-muted);
+}
+.period-years {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.period-year h3 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.period-month-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+.period-month {
+  min-width: 0;
+  padding: 6px 3px;
+  min-height: 36px;
+  border-color: transparent;
+  background: transparent;
+  text-transform: capitalize;
+}
+.period-month.is-in-range {
+  background: var(--editor-bg);
+}
+.period-month.is-endpoint {
+  color: var(--on-accent);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.period-popover-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-subtle);
 }
 .editor-bar {
   display: flex;
@@ -319,6 +418,8 @@ main {
 }
 .editor-bar > div {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
 }
 .editor-bar > span {
@@ -342,7 +443,7 @@ main {
   background: var(--surface);
   border-radius: 10px;
   overflow: hidden !important;
-  box-shadow: 0 2px 5px var(--card-shadow);
+  box-shadow: var(--card-shadow);
 }
 .widget-head {
   display: flex;
@@ -374,12 +475,18 @@ main {
 }
 .widget-actions button,
 .widget-actions summary {
-  min-height: 28px;
+  min-height: 30px;
   font-size: 11px;
   border: 0;
   background: transparent;
   padding: 5px 6px;
   color: var(--muted);
+}
+.widget-actions button,
+.widget-actions summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .widget-actions button:hover {
   background: var(--surface-hover);
@@ -538,7 +645,7 @@ dialog {
   border: 1px solid var(--line);
   border-radius: 14px;
   color: inherit;
-  box-shadow: 0 24px 80px var(--dialog-shadow);
+  box-shadow: var(--dialog-shadow);
 }
 dialog::backdrop {
   background: var(--dialog-backdrop);
@@ -610,6 +717,7 @@ dialog label {
   }
   .period-controls {
     width: 100%;
+    justify-content: flex-start;
   }
   .editor-bar > span {
     display: none;
@@ -637,15 +745,26 @@ dialog label {
   }
 }
 @media (max-width: 420px) {
-  .period-controls label {
-    display: none;
-  }
   .period-controls {
     gap: 4px;
   }
-  .period-controls select {
+  .period-caption {
+    display: none;
+  }
+  .period-picker {
     min-width: 0;
     flex: 1;
+  }
+  #period-trigger {
+    width: 100%;
+    min-width: 0;
+  }
+  .period-years {
+    gap: 8px;
+  }
+  .period-popover {
+    right: auto;
+    left: 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {

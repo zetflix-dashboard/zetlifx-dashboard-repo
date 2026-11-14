@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f6f7f9" />
+    <meta name="theme-color" content="#f4f3f0" />
     <title>Зетфликс — аналитика</title>
     <script>
       // Apply the saved (or OS) appearance before the first paint.
@@ -65,11 +65,39 @@
           </button>
         </nav>
         <div class="period-controls" role="group" aria-label="Период анализа">
-          <label for="period-from">Период</label
-          ><select id="period-from" aria-label="Начало периода"></select
-          ><span aria-hidden="true">—</span
-          ><select id="period-to" aria-label="Конец периода"></select
-          ><button id="filters-reset" title="Сбросить период">Сбросить</button>
+          <span class="period-caption">Период</span>
+          <div id="period-picker" class="period-picker">
+            <button
+              id="period-trigger"
+              type="button"
+              aria-haspopup="dialog"
+              aria-controls="period-panel"
+              aria-expanded="false"
+            ></button>
+            <div
+              id="period-panel"
+              class="period-popover"
+              role="dialog"
+              aria-label="Выбрать интервал месяцев"
+              hidden
+            >
+              <div class="period-popover-top">
+                <strong>Период анализа</strong>
+                <span id="period-step" role="status"></span>
+              </div>
+              <div class="period-presets" aria-label="Готовые периоды">
+                <button type="button" data-period-preset="all">Весь период</button>
+                <button type="button" data-period-preset="2024">2024</button>
+                <button type="button" data-period-preset="2025">2025</button>
+              </div>
+              <div id="period-months" class="period-years"></div>
+              <div class="period-popover-actions">
+                <button type="button" id="period-cancel">Отмена</button>
+                <button type="button" class="primary" id="period-apply">Применить</button>
+              </div>
+            </div>
+          </div>
+          <button id="filters-reset" type="button" title="Сбросить период">Сбросить</button>
         </div>
       </div>
       <div id="editor-bar" class="editor-bar" hidden>
