@@ -13,7 +13,7 @@ for (const [path, raw] of Object.entries(imports)) {
     throw new Error('Повтор или несовпадение C-ID: ' + path);
   definitions.set(
     chart.id,
-    Object.freeze({ ...chart, defaultSize: { w: 6, h: 5 }, minSize: { w: 4, h: 4 } }),
+    Object.freeze({ ...chart, defaultSize: chart.template === 'table' ? { w: 12, h: 8 } : { w: 6, h: 5 }, minSize: { w: 4, h: 4 } }),
   );
 }
 export const ChartRegistry = {
