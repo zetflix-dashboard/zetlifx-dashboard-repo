@@ -10,7 +10,15 @@ test('mode names normalize case and explicit Russian aliases', () => {
     assert.equal(normalizeMode(value), 'chart');
   for (const value of ['admin', 'ADMIN', 'режим админ', 'mode: Admin'])
     assert.equal(normalizeMode(value), 'admin');
-  for (const value of ['batch', 'Batch', 'режим батч', 'please admin', 'administrator'])
+  for (const value of [
+    'batch',
+    'Batch',
+    'режим батч',
+    'please admin',
+    'administrator',
+    '__proto__',
+    'constructor',
+  ])
     assert.equal(normalizeMode(value), null);
 });
 test('ordinary request defaults to one chart and cannot modify the shell or instructions', () => {

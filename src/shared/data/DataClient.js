@@ -96,7 +96,22 @@ export class DataClient {
       if (this.cache.size > this.cacheLimit) this.cache.delete(this.cache.keys().next().value);
       return rows;
     };
-    const pending = this.tail.then(run);
+    const pending = this.tail.then(run).catch(async (error) => {
+      if (error.name !== 'AbortError') {
+        // DuckDB may discard an HTTP file after a failed read while our URL
+        // registration remains cached. Reset only this query's files, inside
+        // the serial queue, so Retry can register them again safely.
+        for (const name of files) {
+          this.registered.delete(name);
+          try {
+            await this.db?.dropFile(name);
+          } catch {
+            /* A failed registration may already have removed the file. */
+          }
+        }
+      }
+      throw error;
+    });
     this.tail = pending.catch(() => {});
     return pending;
   }

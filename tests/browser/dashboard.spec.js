@@ -36,7 +36,7 @@ test('dynamic spaces persist, rename, delete, undo and keyboard navigation', asy
   await page.locator('.catalog-option').first().click();
   await expect(page.locator('.grid-stack-item')).toHaveCount(1);
   await expect
-    .poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key)).spaces.length, key))
+    .poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key))?.spaces.length, key))
     .toBe(2);
   await page.reload();
   await expect(page.getByRole('tab', { name: 'Контент' })).toHaveAttribute('aria-selected', 'true');
@@ -70,14 +70,19 @@ test('mobile uses full width and saves canonical layout across resize', async ({
     )
     .toBe(6);
   await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator('#dashboard-grid')).toHaveClass(/gs-1\b/);
   await expect
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
     .toBe(true);
   await page.locator('#edit-btn').click();
   await page.screenshot({ path: 'test-results/dashboard-mobile.png', fullPage: true });
   await page.reload();
+  await expect(page.locator('.widget-chart canvas')).toHaveCount(2);
+  await expect(page.locator('#dashboard-grid')).toHaveClass(/gs-1\b/);
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await expect(page.locator('.grid-stack-item').first()).toHaveAttribute('gs-w', '6');
+  await expect(page.locator('#dashboard-grid')).toHaveClass(/gs-12\b/);
+  await expect(page.locator('[data-instance-id="c03-initial"]')).toHaveAttribute('gs-w', '6');
+  await expect(page.locator('[data-instance-id="c03-initial"]')).toHaveAttribute('gs-h', '6');
 });
 test('legacy empty layout is kept and malformed import does not replace work', async ({ page }) => {
   await page.addInitScript(() =>

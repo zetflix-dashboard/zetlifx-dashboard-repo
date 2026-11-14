@@ -10,16 +10,15 @@ export function normalizeMode(raw) {
     .toLocaleLowerCase('ru-RU')
     .replace(/^(?:режим|mode)\s*[:=-]?\s*/u, '')
     .trim();
-  return (
-    {
-      chart: 'chart',
-      чарт: 'chart',
-      график: 'chart',
-      admin: 'admin',
-      админ: 'admin',
-      администратор: 'admin',
-    }[value] || null
-  );
+  const aliases = {
+    chart: 'chart',
+    чарт: 'chart',
+    график: 'chart',
+    admin: 'admin',
+    админ: 'admin',
+    администратор: 'admin',
+  };
+  return Object.hasOwn(aliases, value) ? aliases[value] : null;
 }
 export function parseScope(body = '') {
   const blocks = [...String(body).matchAll(/<!--\s*ZETFLIX_SCOPE\s*\r?\n([\s\S]*?)\r?\n\s*-->/giu)];

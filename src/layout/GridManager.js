@@ -148,12 +148,18 @@ export class GridManager {
 
   replace(layout) {
     this.silent = true;
+    const displayColumns = this.grid.getColumn();
+    // Load the saved desktop coordinates before applying responsive columns.
+    // Otherwise makeWidget clamps widths on a mobile first visit and loses
+    // the canonical layout before GridStack can cache it.
+    this.grid.column(12, 'none');
     this.grid.batchUpdate();
     try {
       for (const id of Array.from(this.items.keys())) this.removeOne(id, false);
       for (const widget of layout.widgets) this.addOne(widget, false);
     } finally {
       this.grid.batchUpdate(false);
+      this.grid.column(displayColumns, 'list');
       this.silent = false;
       this.setEditing(this.editing);
     }

@@ -30,3 +30,14 @@
 - [GitHub: branch protection](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)
 - [W3C: вкладки](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/)
 - [ECharts: доступность](https://echarts.apache.org/handbook/en/best-practices/aria/)
+
+
+## Готовая конфигурация защиты
+В `.github/main-ruleset.json` сохранён ruleset с двумя required checks, нулём обязательных approvals и запретом force-push/удаления main. Он подготовлен, но не применяется самим наличием в репозитории. После merge workflow и появления обоих checks администратор может выполнить из checkout:
+
+```sh
+gh api --method POST repos/zetflix-dashboard/zetlifx-dashboard-repo/rulesets --input .github/main-ruleset.json
+gh api --method PATCH repos/zetflix-dashboard/zetlifx-dashboard-repo -F allow_auto_merge=true
+```
+
+Нужен уже авторизованный GitHub CLI с Administration:write; токены в файлы не помещать. При существующем одноимённом ruleset обновлять его по ID, а не создавать копию. [Схема GitHub API](https://docs.github.com/en/rest/repos/rules#create-a-repository-ruleset).
