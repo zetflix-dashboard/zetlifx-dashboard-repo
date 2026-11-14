@@ -139,7 +139,9 @@ test('loading failure can recover with Retry without damaging other cards', asyn
   await expect(page.locator('.widget-chart canvas')).toHaveCount(2);
 });
 
-test('resize handles all directions, stay invisible and use directional cursors', async ({ page }) => {
+test('resize handles all directions, stay invisible and use directional cursors', async ({
+  page,
+}) => {
   await ready(page);
   await page.locator('#edit-btn').click();
   const widget = page.locator('[data-instance-id="c03-initial"]');
@@ -147,13 +149,14 @@ test('resize handles all directions, stay invisible and use directional cursors'
     const handle = widget.locator('.ui-resizable-' + direction);
     await expect(handle).toHaveCount(1);
     await expect(handle).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-    const cursor = direction === 'n' || direction === 's'
-      ? 'ns-resize'
-      : direction === 'e' || direction === 'w'
-        ? 'ew-resize'
-        : direction === 'ne' || direction === 'sw'
-          ? 'nesw-resize'
-          : 'nwse-resize';
+    const cursor =
+      direction === 'n' || direction === 's'
+        ? 'ns-resize'
+        : direction === 'e' || direction === 'w'
+          ? 'ew-resize'
+          : direction === 'ne' || direction === 'sw'
+            ? 'nesw-resize'
+            : 'nwse-resize';
     await expect(handle).toHaveCSS('cursor', cursor);
   }
   const drag = widget.locator('.widget-grip');
@@ -175,9 +178,7 @@ test('theme toggle persists and recolors rendered charts without new queries', a
   await expect
     .poll(() => page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor))
     .toBe(next === 'dark' ? 'rgb(16, 23, 34)' : 'rgb(246, 247, 249)');
-  await expect
-    .poll(() => page.evaluate(() => localStorage.getItem('zetflix.theme')))
-    .toBe(next);
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('zetflix.theme'))).toBe(next);
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', next);
   await expect(page.locator('.widget-chart canvas')).toHaveCount(2);

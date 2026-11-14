@@ -26,10 +26,9 @@ export function initTheme(button, onChange) {
     button.replaceChildren(createIcon(theme === 'dark' ? 'sun' : 'moon'));
     button.setAttribute('aria-label', label);
     button.title = label;
-    document.querySelector('meta[name="theme-color"]')?.setAttribute(
-      'content',
-      theme === 'dark' ? '#101722' : '#f6f7f9',
-    );
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', theme === 'dark' ? '#101722' : '#f6f7f9');
     onChange();
   };
   apply(resolveTheme(readPreference(), query.matches));
@@ -43,11 +42,9 @@ export function initTheme(button, onChange) {
     apply(next);
   });
   query.addEventListener('change', () => {
-    if (!['light', 'dark'].includes(readPreference()))
-      apply(resolveTheme(null, query.matches));
+    if (!['light', 'dark'].includes(readPreference())) apply(resolveTheme(null, query.matches));
   });
   window.addEventListener('storage', (event) => {
-    if (event.key === THEME_KEY)
-      apply(resolveTheme(event.newValue, query.matches));
+    if (event.key === THEME_KEY) apply(resolveTheme(event.newValue, query.matches));
   });
 }

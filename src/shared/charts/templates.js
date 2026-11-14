@@ -12,7 +12,9 @@ export function chartTheme() {
   const style = getComputedStyle(document.documentElement);
   const token = (key, fallback) => style.getPropertyValue(key).trim() || fallback;
   return {
-    palette: token('--chart-palette', PALETTE.join(',')).split(',').map((c) => c.trim()),
+    palette: token('--chart-palette', PALETTE.join(','))
+      .split(',')
+      .map((c) => c.trim()),
     text: token('--chart-text', '#475569'),
     axis: token('--chart-axis', '#64748b'),
     grid: token('--chart-grid', '#e9edf2'),
