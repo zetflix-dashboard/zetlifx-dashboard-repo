@@ -21,7 +21,6 @@ export function initPeriodPicker(root, filters, onError = () => {}) {
   const step = root.querySelector('#period-step');
   const apply = root.querySelector('#period-apply');
   const cancel = root.querySelector('#period-cancel');
-  const reset = root.querySelector('#filters-reset');
   let from;
   let to;
   let selectingEnd = false;
@@ -31,7 +30,6 @@ export function initPeriodPicker(root, filters, onError = () => {}) {
     const current = filters.get();
     trigger.textContent = monthLabel(current.periodFrom) + ' — ' + monthLabel(current.periodTo);
     trigger.setAttribute('aria-expanded', String(!panel.hidden));
-    reset.disabled = current.periodFrom === MIN_MONTH && current.periodTo === MAX_MONTH;
   }
   function render() {
     grid.replaceChildren();
@@ -108,10 +106,6 @@ export function initPeriodPicker(root, filters, onError = () => {}) {
     } catch (error) {
       onError(error.message);
     }
-  });
-  reset.addEventListener('click', () => {
-    filters.reset();
-    syncLabel();
   });
   root.querySelectorAll('[data-period-preset]').forEach((button) => {
     button.addEventListener('click', () => {
