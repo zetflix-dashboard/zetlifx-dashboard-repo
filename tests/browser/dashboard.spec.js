@@ -18,7 +18,10 @@ test('real Parquet queries, shared table, period filter, no runtime errors', asy
   await page.locator('.widget-table').first().click();
   await expect(page.locator('tbody tr')).toHaveCount(24);
   await expect(page.locator('tbody tr').first()).toContainText('01.24');
-  await page.selectOption('#period-to', '2024-01');
+  await page.locator('#period-trigger').click();
+  await page.locator('#period-months [data-month="2024-01"]').click();
+  await page.locator('#period-months [data-month="2024-01"]').click();
+  await page.locator('#period-apply').click();
   await expect(page.locator('tbody tr')).toHaveCount(1);
   await expect(page.locator('tbody tr').first().locator('td').nth(1)).not.toHaveText('—');
   await page.locator('#filters-reset').click();
@@ -177,9 +180,35 @@ test('theme toggle persists and recolors rendered charts without new queries', a
   await expect(page.locator('.widget-chart canvas')).toHaveCount(2);
   await expect
     .poll(() => page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor))
-    .toBe(next === 'dark' ? 'rgb(16, 23, 34)' : 'rgb(246, 247, 249)');
+    .toBe(next === 'dark' ? 'rgb(20, 25, 24)' : 'rgb(244, 243, 240)');
   await expect.poll(() => page.evaluate(() => localStorage.getItem('zetflix.theme'))).toBe(next);
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', next);
   await expect(page.locator('.widget-chart canvas')).toHaveCount(2);
+});
+
+test('month range picker supports presets, cancel, and responsive layout', async ({ page }) => {
+  await ready(page);
+  const trigger = page.locator('#period-trigger');
+  await expect(trigger).toContainText('2024');
+  await trigger.click();
+  await expect(page.locator('#period-panel')).toBeVisible();
+  await expect(page.locator('#period-months .period-month')).toHaveCount(24);
+  await page.locator('[data-period-preset="2025"]').click();
+  await page.locator('#period-apply').click();
+  await expect(trigger).toContainText('2025');
+  await trigger.click();
+  await page.locator('[data-period-preset="2024"]').click();
+  await page.locator('#period-cancel').click();
+  await expect(trigger).toContainText('2025');
+  await trigger.click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#period-panel')).toBeHidden();
+  await page.locator('#filters-reset').click();
+  await expect(trigger).toContainText('2024');
+  await expect(trigger).toContainText('2025');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await trigger.click();
+  await expect(page.locator('#period-panel')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
