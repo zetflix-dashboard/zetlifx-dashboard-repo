@@ -10,5 +10,8 @@
       "field": "cost_per_hour"
     }
   ],
-  "pointLabel": "title"
+  "pointLabel": "title",
+  "localFilters": [
+    "genre"
+  ]
 }
