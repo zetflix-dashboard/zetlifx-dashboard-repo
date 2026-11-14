@@ -1,7 +1,12 @@
 import { MIN_MONTH, MAX_MONTH, validateFilters } from '../filters/FilterStore.js';
 
-const formatter = new Intl.DateTimeFormat('ru-RU', { month: 'short', year: 'numeric', timeZone: 'UTC' });
-const monthLabel = (month) => formatter.format(new Date(month + '-01T00:00:00Z')).replace(' г.', '');
+const formatter = new Intl.DateTimeFormat('ru-RU', {
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+const monthLabel = (month) =>
+  formatter.format(new Date(month + '-01T00:00:00Z')).replace(' г.', '');
 const months = [];
 for (let year = Number(MIN_MONTH.slice(0, 4)); year <= Number(MAX_MONTH.slice(0, 4)); year++) {
   for (let m = 1; m <= 12; m++) {
@@ -72,7 +77,9 @@ export function initPeriodPicker(root, filters, onError = () => {}) {
       section.append(cells);
       grid.append(section);
     }
-    step.textContent = selectingEnd ? 'Выберите последний месяц' : 'Выберите первый месяц или готовый период';
+    step.textContent = selectingEnd
+      ? 'Выберите последний месяц'
+      : 'Выберите первый месяц или готовый период';
   }
   function open() {
     const current = filters.get();

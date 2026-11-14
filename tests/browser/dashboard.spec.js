@@ -210,5 +210,7 @@ test('month range picker supports presets, cancel, and responsive layout', async
   await page.setViewportSize({ width: 390, height: 844 });
   await trigger.click();
   await expect(page.locator('#period-panel')).toBeVisible();
-  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+    .toBe(true);
 });
