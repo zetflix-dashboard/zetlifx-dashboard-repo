@@ -1,0 +1,27 @@
+name: Format OLED branch (one-shot)
+on:
+  push:
+    branches: [admin/oled-ui-and-c15-c20-c14]
+    paths: [.github/workflows/format-oled-branch.yml]
+permissions:
+  contents: write
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx prettier --write src/style.css
+      - name: Commit only formatted CSS
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/style.css
+          if ! git diff --cached --quiet; then
+            git commit -m "style: normalize CSS after removing obsolete rules"
+            git push origin HEAD:admin/oled-ui-and-c15-c20-c14
+          fi
