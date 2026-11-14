@@ -138,3 +138,47 @@ test('loading failure can recover with Retry without damaging other cards', asyn
   await expect(page.locator('.widget-overlay:visible')).toHaveCount(0);
   await expect(page.locator('.widget-chart canvas')).toHaveCount(2);
 });
+
+test('resize handles all directions, stay invisible and use directional cursors', async ({ page }) => {
+  await ready(page);
+  await page.locator('#edit-btn').click();
+  const widget = page.locator('[data-instance-id="c03-initial"]');
+  for (const direction of ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw']) {
+    const handle = widget.locator('.ui-resizable-' + direction);
+    await expect(handle).toHaveCount(1);
+    await expect(handle).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    const cursor = direction === 'n' || direction === 's'
+      ? 'ns-resize'
+      : direction === 'e' || direction === 'w'
+        ? 'ew-resize'
+        : direction === 'ne' || direction === 'sw'
+          ? 'nesw-resize'
+          : 'nwse-resize';
+    await expect(handle).toHaveCSS('cursor', cursor);
+  }
+  const drag = widget.locator('.widget-grip');
+  await expect(drag).toHaveAttribute('aria-label', /Переместить график/);
+  await expect(drag.locator('svg')).toHaveCount(1);
+  await expect(drag).not.toContainText('Переместить');
+});
+
+test('theme toggle persists and recolors rendered charts without new queries', async ({ page }) => {
+  await ready(page);
+  const toggle = page.locator('#theme-toggle');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', /^(light|dark)$/);
+  const initial = await page.locator('html').getAttribute('data-theme');
+  const next = initial === 'dark' ? 'light' : 'dark';
+  await toggle.click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', next);
+  await expect(toggle).toHaveAttribute('aria-label', /Включить/);
+  await expect(page.locator('.widget-chart canvas')).toHaveCount(2);
+  await expect
+    .poll(() => page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor))
+    .toBe(next === 'dark' ? 'rgb(16, 23, 34)' : 'rgb(246, 247, 249)');
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('zetflix.theme')))
+    .toBe(next);
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', next);
+  await expect(page.locator('.widget-chart canvas')).toHaveCount(2);
+});
