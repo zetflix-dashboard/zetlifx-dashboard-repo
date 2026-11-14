@@ -17,7 +17,7 @@ import { initTheme } from './shared/ui/theme.js';
 import { initPeriodPicker } from './shared/ui/PeriodPicker.js';
 import { createIcon } from './shared/ui/icons.js';
 const byId = (id) => document.getElementById(id);
-const known = (id) => ChartRegistry.has(id);
+const known = (id) => ChartRegistry.get(id);
 const filters = new FilterStore();
 const data = new DataClient();
 const charts = new ChartManager(data, filters);
