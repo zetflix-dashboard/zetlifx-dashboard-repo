@@ -26,7 +26,7 @@ export class GridManager {
       staticGrid: true,
       draggable: { handle: '.widget-grip', scroll: true },
       resizable: { handles: 'se' },
-      responsive: {
+      columnOpts: {
         breakpoints: [{ w: 660, c: 1 }, { w: 1100, c: 6 }],
         layout: 'list'
       }
@@ -107,7 +107,7 @@ export class GridManager {
 
   getLayout() {
     // GridStack remembers the original 12-column coordinates across responsive changes.
-    const nodes = this.grid.save(false, false, 12);
+    const nodes = this.grid.save(false, false, undefined, 12);
     const widgets = nodes.map((node) => {
       const item = this.items.get(node.id);
       return {
