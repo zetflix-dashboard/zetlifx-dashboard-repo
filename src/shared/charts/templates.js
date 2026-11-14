@@ -49,18 +49,20 @@ export function buildOption(definition, rows, reducedMotion = false, theme = cha
         valueFormatter: (value) => formatValue(value, unit),
       },
       legend: { bottom: 2, textStyle: { color: theme.text } },
-      series: [{
-        name: fields[metric].label,
-        type: 'pie',
-        radius: ['45%', '71%'],
-        center: ['50%', '44%'],
-        label: { show: true, formatter: '{d}%', color: theme.text },
-        itemStyle: { borderColor: theme.tooltip, borderWidth: 2 },
-        data: rows.map((row) => ({
-          name: String(row[definition.dimension]),
-          value: Number(row[metric]),
-        })),
-      }],
+      series: [
+        {
+          name: fields[metric].label,
+          type: 'pie',
+          radius: ['45%', '71%'],
+          center: ['50%', '44%'],
+          label: { show: true, formatter: '{d}%', color: theme.text },
+          itemStyle: { borderColor: theme.tooltip, borderWidth: 2 },
+          data: rows.map((row) => ({
+            name: String(row[definition.dimension]),
+            value: Number(row[metric]),
+          })),
+        },
+      ],
     };
   }
   return {
@@ -123,8 +125,13 @@ export function buildOption(definition, rows, reducedMotion = false, theme = cha
           const y = r[series.field] == null ? null : Number(r[series.field]);
           return scatter
             ? {
-                name: definition.pointLabel ? String(r[definition.pointLabel]) : fields[series.field].label,
-                value: [r[definition.dimension] == null ? null : Number(r[definition.dimension]), y],
+                name: definition.pointLabel
+                  ? String(r[definition.pointLabel])
+                  : fields[series.field].label,
+                value: [
+                  r[definition.dimension] == null ? null : Number(r[definition.dimension]),
+                  y,
+                ],
               }
             : y;
         }),
@@ -168,7 +175,9 @@ export function renderTable(container, definition, rows) {
     header.append(th);
   }
   const bars = definition.columnBars || [];
-  const maxima = new Map(bars.map((field) => [field, Math.max(0, ...rows.map((row) => Number(row[field]) || 0))]));
+  const maxima = new Map(
+    bars.map((field) => [field, Math.max(0, ...rows.map((row) => Number(row[field]) || 0))]),
+  );
   const body = table.createTBody();
   for (const row of rows) {
     const tr = body.insertRow();
@@ -179,7 +188,8 @@ export function renderTable(container, definition, rows) {
       if (bars.includes(field)) {
         const max = maxima.get(field);
         const value = Number(row[field]);
-        const width = max && Number.isFinite(value) ? Math.min(100, Math.max(0, value / max * 100)) : 0;
+        const width =
+          max && Number.isFinite(value) ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
         cell.classList.add('cell-bar');
         cell.dataset.barIndex = String(bars.indexOf(field));
         cell.style.setProperty('--bar-width', width + '%');

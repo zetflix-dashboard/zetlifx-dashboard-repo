@@ -1,7 +1,10 @@
 const NS = 'http://www.w3.org/2000/svg';
 
 const ICONS = {
-  info: [['circle', { cx: 12, cy: 12, r: 9 }], ['path', { d: 'M12 10v6m0-9h.01' }]],
+  info: [
+    ['circle', { cx: 12, cy: 12, r: 9 }],
+    ['path', { d: 'M12 10v6m0-9h.01' }],
+  ],
   grip: [
     ['circle', { cx: 9, cy: 5, r: 1.5 }],
     ['circle', { cx: 15, cy: 5, r: 1.5 }],

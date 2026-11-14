@@ -681,11 +681,21 @@ main {
   background-repeat: no-repeat;
   font-variant-numeric: tabular-nums;
 }
-.data-table .cell-bar[data-bar-index='1'] { --bar-color: var(--table-bar-1); }
-.data-table .cell-bar[data-bar-index='2'] { --bar-color: var(--table-bar-2); }
-.data-table .cell-bar[data-bar-index='3'] { --bar-color: var(--table-bar-3); }
-.data-table .cell-bar[data-bar-index='4'] { --bar-color: var(--table-bar-4); }
-.data-table .cell-bar[data-bar-index='5'] { --bar-color: var(--table-bar-5); }
+.data-table .cell-bar[data-bar-index='1'] {
+  --bar-color: var(--table-bar-1);
+}
+.data-table .cell-bar[data-bar-index='2'] {
+  --bar-color: var(--table-bar-2);
+}
+.data-table .cell-bar[data-bar-index='3'] {
+  --bar-color: var(--table-bar-3);
+}
+.data-table .cell-bar[data-bar-index='4'] {
+  --bar-color: var(--table-bar-4);
+}
+.data-table .cell-bar[data-bar-index='5'] {
+  --bar-color: var(--table-bar-5);
+}
 .grid-stack-item:has(.widget-info[open]) {
   z-index: 10 !important;
 }

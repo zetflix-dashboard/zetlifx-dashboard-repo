@@ -84,12 +84,18 @@ export class GridManager {
     const description = element(
       'p',
       '',
-      definition.question + ' ' + datasets[definition.dataset].limitation +
-        ' Фильтры: ' + (datasets[definition.dataset].filters.length ? 'период.' : 'общий период не применяется.'),
+      definition.question +
+        ' ' +
+        datasets[definition.dataset].limitation +
+        ' Фильтры: ' +
+        (datasets[definition.dataset].filters.length ? 'период.' : 'общий период не применяется.'),
     );
     info.append(summary, description);
     titleRow.append(info);
-    titles.append(titleRow, element('p', '', definition.id + ' · ' + datasets[definition.dataset].label));
+    titles.append(
+      titleRow,
+      element('p', '', definition.id + ' · ' + datasets[definition.dataset].label),
+    );
     const actions = element('div', 'widget-actions');
     const grip = element('button', 'widget-grip');
     grip.type = 'button';

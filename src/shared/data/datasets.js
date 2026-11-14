@@ -23,14 +23,13 @@ const SQL1 = [
   'ORDER BY i.period',
 ].join('\n');
 
-
 // C15: subscription-access viewing hours, independently aggregated before joining titles.
 const SQL_C15 = [
   'WITH watch AS (',
   '  SELECT v.title_id, SUM(v.hours_watched) AS hours',
   "  FROM read_parquet('viewing_daily.parquet') v",
   "  JOIN read_parquet('users.parquet') u USING (user_id)",
-  "  WHERE v.view_date >= CAST(? AS DATE) AND v.view_date <= last_day(CAST(? AS DATE))",
+  '  WHERE v.view_date >= CAST(? AS DATE) AND v.view_date <= last_day(CAST(? AS DATE))',
   "    AND NOT u.is_test AND v.access_type IN ('Подписка', 'Пробный период', 'Партнерский пакет')",
   '  GROUP BY v.title_id',
   ')',
@@ -101,7 +100,7 @@ const SQL_C20 = [
   '  SELECT r, f, m, COUNT(*) AS users, SUM(amount) AS revenue',
   '  FROM scored GROUP BY r, f, m',
   ')',
-  "SELECT CAST(r AS VARCHAR) || CAST(f AS VARCHAR) || CAST(m AS VARCHAR) AS segment,",
+  'SELECT CAST(r AS VARCHAR) || CAST(f AS VARCHAR) || CAST(m AS VARCHAR) AS segment,',
   '  CAST(r AS DOUBLE) AS recency_score, CAST(f AS DOUBLE) AS frequency_score,',
   '  CAST(m AS DOUBLE) AS monetary_score, CAST(users AS DOUBLE) AS users,',
   '  CAST(revenue AS DOUBLE) AS revenue,',
@@ -117,7 +116,8 @@ export const datasets = Object.freeze({
     grain: 'происхождение контента за период',
     dateRole: 'дата просмотра',
     filters: ['period'],
-    limitation: 'Только часы подписочного доступа, пробных периодов и партнёрских пакетов; аренда и тестовые пользователи исключены.',
+    limitation:
+      'Только часы подписочного доступа, пробных периодов и партнёрских пакетов; аренда и тестовые пользователи исключены.',
     fields: {
       origin: { label: 'Происхождение', unit: 'text' },
       hours: { label: 'Часы просмотра', unit: 'number' },
@@ -125,12 +125,18 @@ export const datasets = Object.freeze({
   },
   titleCostPerHour: {
     label: 'C14 · стоимость часа просмотра',
-    sources: ['content_amortization.parquet', 'viewing_daily.parquet', 'users.parquet', 'content_titles.parquet'],
+    sources: [
+      'content_amortization.parquet',
+      'viewing_daily.parquet',
+      'users.parquet',
+      'content_titles.parquet',
+    ],
     sql: SQL_C14,
     grain: 'тайтл за выбранный период',
     dateRole: 'месяц амортизации и дата просмотра',
     filters: ['period'],
-    limitation: 'Амортизация за выбранные месяцы делится на часы подписочного просмотра за те же месяцы. Тайтлы с нулём часов исключены.',
+    limitation:
+      'Амортизация за выбранные месяцы делится на часы подписочного просмотра за те же месяцы. Тайтлы с нулём часов исключены.',
     fields: {
       title: { label: 'Тайтл', unit: 'text' },
       hours: { label: 'Часы просмотра', unit: 'number' },
@@ -144,7 +150,8 @@ export const datasets = Object.freeze({
     grain: 'RFM-сегмент прямых плательщиков',
     dateRole: 'фиксированный срез 31.12.2025',
     filters: [],
-    limitation: 'Фиксированный срез 31.12.2025: только прямые пользователи с успешными списаниями 2024–2025, без тестовых и партнёров. R — дни от последнего просмотра; F — месяцы оплаченного доступа из успешных событий в окне; M — сумма успешных списаний. Общий фильтр периода не применяется. Доля — от суммы успешных платежей, не признанная выручка.',
+    limitation:
+      'Фиксированный срез 31.12.2025: только прямые пользователи с успешными списаниями 2024–2025, без тестовых и партнёров. R — дни от последнего просмотра; F — месяцы оплаченного доступа из успешных событий в окне; M — сумма успешных списаний. Общий фильтр периода не применяется. Доля — от суммы успешных платежей, не признанная выручка.',
     fields: {
       segment: { label: 'RFM', unit: 'text' },
       recency_score: { label: 'R', unit: 'number' },
