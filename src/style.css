@@ -175,7 +175,7 @@ button:disabled {
   height: 29px;
   border-radius: 7px;
   background: var(--brand-mark-bg);
-  color: var(--on-accent);
+  color: #ffffff;
   font-size: 18px;
 }
 .brand-caption {
@@ -415,25 +415,29 @@ main {
   pointer-events: none;
 }
 /* Resize zones are fully transparent but remain interactive for mouse/touch. */
-.edit-mode .grid-stack > .grid-stack-item > .ui-resizable-handle {
+.grid-stack.edit-mode > .grid-stack-item > .ui-resizable-handle {
   background: transparent !important;
   border: 0;
   box-shadow: none;
 }
-.edit-mode .grid-stack > .grid-stack-item > .ui-resizable-n,
-.edit-mode .grid-stack > .grid-stack-item > .ui-resizable-s {
+.grid-stack.edit-mode > .grid-stack-item > .ui-resizable-handle::before,
+.grid-stack.edit-mode > .grid-stack-item > .ui-resizable-handle::after {
+  display: none !important;
+}
+.grid-stack.edit-mode > .grid-stack-item > .ui-resizable-n,
+.grid-stack.edit-mode > .grid-stack-item > .ui-resizable-s {
   cursor: ns-resize;
 }
-.edit-mode .grid-stack > .grid-stack-item > .ui-resizable-e,
-.edit-mode .grid-stack > .grid-stack-item > .ui-resizable-w {
+.grid-stack.edit-mode > .grid-stack-item > .ui-resizable-e,
+.grid-stack.edit-mode > .grid-stack-item > .ui-resizable-w {
   cursor: ew-resize;
 }
-.edit-mode .grid-stack > .grid-stack-item > .ui-resizable-nw,
-.edit-mode .grid-stack > .grid-stack-item > .ui-resizable-se {
+.grid-stack.edit-mode > .grid-stack-item > .ui-resizable-nw,
+.grid-stack.edit-mode > .grid-stack-item > .ui-resizable-se {
   cursor: nwse-resize;
 }
-.edit-mode .grid-stack > .grid-stack-item > .ui-resizable-ne,
-.edit-mode .grid-stack > .grid-stack-item > .ui-resizable-sw {
+.grid-stack.edit-mode > .grid-stack-item > .ui-resizable-ne,
+.grid-stack.edit-mode > .grid-stack-item > .ui-resizable-sw {
   cursor: nesw-resize;
 }
 .widget-info p {
