@@ -1,0 +1,13 @@
+{
+  "id": "C15",
+  "title": "Доля просмотров оригиналов",
+  "question": "Какую долю часов подписочного просмотра составляют оригинальные проекты?",
+  "dataset": "originalsViewing",
+  "template": "pie",
+  "dimension": "origin",
+  "series": [
+    {
+      "field": "hours"
+    }
+  ]
+}
