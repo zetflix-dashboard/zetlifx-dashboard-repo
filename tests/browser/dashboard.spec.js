@@ -365,10 +365,33 @@ test('RFM table is compact, includes only three metric bars and a totals row', a
   const card = page.locator('.grid-stack-item').filter({ hasText: 'RFM-сегменты пользователей' });
   const table = card.locator('.data-table');
   await expect(table.locator('tbody tr')).toHaveCount(21, { timeout: 120000 });
-  await expect(table.locator('thead th')).toHaveCount(4);
+  await expect(table.locator('thead th')).toHaveCount(9);
   await expect(table.locator('.cell-bar').first()).toHaveAttribute('data-bar-index', '0');
   await expect(table.locator('tfoot tr')).toHaveCount(1);
   await expect(table.locator('tfoot tr')).toContainText('100%');
   await expect(table.locator('thead th').first()).toHaveCSS('position', 'sticky');
   await expect(card).toHaveAttribute('gs-w', '12');
+});
+
+test('C03 quarter is a per-card filter and the system renders a subtle inline C-ID', async ({ page }) => {
+  await ready(page);
+  const c03 = page.locator('[data-instance-id="c03-initial"]');
+  await expect(c03.locator('.widget-chart-id')).toHaveText('· C03');
+  await expect(c03.locator('.widget-titles > p')).toHaveCount(0);
+  await expect(page.locator('.widget-titles > p')).toHaveCount(0);
+  const selector = c03.locator('.widget-filter-select');
+  await expect(selector).toHaveCount(1);
+  await expect(selector).toHaveValue('all');
+  await c03.locator('.widget-table').click();
+  await expect(c03.locator('tbody tr')).toHaveCount(24);
+  await selector.selectOption('1');
+  await expect(c03.locator('tbody tr')).toHaveCount(6, { timeout: 120000 });
+  await expect(c03.locator('.widget-overlay:visible')).toHaveCount(0);
+  await expect(page.locator('[data-instance-id="c18-initial"] canvas')).toHaveCount(1);
+  await expect.poll(() =>
+    page.evaluate(() => JSON.parse(localStorage.getItem('zetflix.workspaces.v2') || 'null')?.spaces?.[0]?.widgets?.find(w => w.chartId === 'C03')?.localFilters?.quarter)
+  ).toBe('1');
+  await page.reload();
+  await expect(page.locator('[data-instance-id="c03-initial"] .widget-filter-select')).toHaveValue('1');
+  await expect(page.locator('[data-instance-id="c03-initial"] .widget-chart canvas')).toHaveCount(1);
 });
