@@ -9,5 +9,8 @@
     {
       "field": "hours"
     }
+  ],
+  "localFilters": [
+    "access"
   ]
 }
