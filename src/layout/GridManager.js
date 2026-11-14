@@ -2,6 +2,7 @@ import { GridStack } from 'gridstack';
 import { ChartRegistry } from '../shared/charts/ChartRegistry.js';
 import { datasets } from '../shared/data/datasets.js';
 import { LAYOUT_VERSION } from './LayoutStorage.js';
+import { createIcon } from '../shared/ui/icons.js';
 
 function element(tag, className, content) {
   const node = document.createElement(tag);
@@ -27,7 +28,9 @@ export class GridManager {
         animate: true,
         staticGrid: true,
         draggable: { handle: '.widget-grip', scroll: true },
-        resizable: { handles: 'se' },
+        // All eight directions; invisible hit areas preserve native cursor hints.
+        alwaysShowResizeHandle: true,
+        resizable: { handles: 'n,ne,e,se,s,sw,w,nw', autoHide: false },
         columnOpts: {
           columnMax: 12,
           breakpoints: [
@@ -76,8 +79,10 @@ export class GridManager {
       element('p', '', definition.id + ' · ' + datasets[definition.dataset].label),
     );
     const actions = element('div', 'widget-actions');
-    const grip = element('button', 'widget-grip', 'Переместить');
+    const grip = element('button', 'widget-grip');
     grip.type = 'button';
+    grip.append(createIcon('grip'));
+
     grip.title = 'Перетащите или используйте стрелки; Shift + стрелки меняют размер';
     grip.addEventListener('keydown', (event) => {
       if (!this.editing || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key))
@@ -102,7 +107,7 @@ export class GridManager {
       this.grid.update(item, patch);
       this.onChange(this.getLayout());
     });
-    grip.setAttribute('aria-label', 'Перетащить ' + definition.title);
+    grip.setAttribute('aria-label', 'Переместить график: ' + definition.title);
     const remove = element('button', 'widget-remove', '×');
     remove.type = 'button';
     remove.title = 'Убрать график с макета';
