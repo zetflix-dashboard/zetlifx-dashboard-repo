@@ -288,8 +288,9 @@ test('floating editor supports semantic headings, persistence and undo', async (
     .poll(() =>
       page.evaluate(
         (key) =>
-          JSON.parse(localStorage.getItem(key) || 'null')?.spaces?.[0]?.widgets?.find((w) => w.type === 'heading')
-            ?.title,
+          JSON.parse(localStorage.getItem(key) || 'null')?.spaces?.[0]?.widgets?.find(
+            (w) => w.type === 'heading',
+          )?.title,
         key,
       ),
     )
