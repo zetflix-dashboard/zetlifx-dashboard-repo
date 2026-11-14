@@ -353,7 +353,7 @@ test('local filters are isolated by widget and saved with the workspace', async 
   await expect(selector).toHaveValue('Драма');
   await expect(page.locator('.widget-chart canvas')).toHaveCount(3);
   await page.reload();
-  await expect(page.locator('.widget-filter-select')).toHaveValue('Драма');
+  await expect(cards.locator('.widget-filter-select')).toHaveValue('Драма');
 });
 
 test('RFM table is compact, includes only three metric bars and a totals row', async ({ page }) => {
