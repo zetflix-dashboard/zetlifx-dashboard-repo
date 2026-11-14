@@ -1,0 +1,27 @@
+name: One-time format tests
+on:
+  push:
+    branches: [admin/tables-filters-headings-editor]
+    paths: [.github/workflows/format-test-branch.yml]
+permissions:
+  contents: write
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx prettier --write tests/browser/dashboard.spec.js
+      - name: Commit format
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/browser/dashboard.spec.js
+          if ! git diff --cached --quiet; then
+            git commit -m "style: format safe localStorage polling test"
+            git push origin HEAD:admin/tables-filters-headings-editor
+          fi
