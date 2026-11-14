@@ -1,0 +1,58 @@
+name: Validate new analytics SQL and format branch
+on:
+  push:
+    branches: [admin/oled-ui-and-c15-c20-c14]
+    paths: [.github/workflows/verify-analytics-branch.yml]
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: npm ci --no-audit --no-fund
+      - run: pip install -q duckdb
+      - name: Format changed sources with repository Prettier
+        run: npx prettier --write src/main.js src/style.css src/layout/GridManager.js src/shared/ui/PeriodPicker.js src/shared/ui/icons.js src/shared/ui/theme.js src/shared/charts/contract.js src/shared/charts/ChartManager.js src/shared/charts/templates.js src/shared/data/datasets.js src/charts/C14-cost-scatter/chart.json src/charts/C15-original-share/chart.json src/charts/C20-rfm/chart.json tests/browser/dashboard.spec.js index.html
+      - name: Test chart definitions and real SQL against actual Parquet
+        run: |
+          node --input-type=module -e "import {datasets} from './src/shared/data/datasets.js'; import {writeFileSync} from 'node:fs'; writeFileSync('/tmp/chart-sql.json',JSON.stringify(Object.fromEntries(['originalsViewing','titleCostPerHour','rfmSnapshot'].map(k=>[k,datasets[k].sql]))))"
+          python - <<'PY'
+          import duckdb, json, os
+          os.chdir('public/data')
+          con=duckdb.connect()
+          queries=json.load(open('/tmp/chart-sql.json'))
+          for key, sql in queries.items():
+              params = [] if key=='rfmSnapshot' else ['2024-01-01','2025-12-01']
+              print('QUERY', key, 'parameters',sql.count('?'))
+              rows=con.execute(sql,params).fetchall()
+              print('ROWS',len(rows),'HEAD',rows[:2])
+              assert rows
+              if key=='originalsViewing':
+                  assert len(rows)==2
+                  assert all(r[1]>0 for r in rows)
+              if key=='titleCostPerHour':
+                  assert len(rows)>10 and all(r[1]>0 and r[2]>=0 for r in rows)
+              if key=='rfmSnapshot':
+                  assert len(rows)<=27
+                  assert abs(sum(r[-1] for r in rows)-100)<1e-6
+          PY
+      - run: npm run check
+      - name: Commit formatted files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src index.html tests README.md docs
+          if ! git diff --cached --quiet; then
+            git commit -m "style: format new chart templates and OLED UI"
+            git push origin HEAD:admin/oled-ui-and-c15-c20-c14
+          fi
