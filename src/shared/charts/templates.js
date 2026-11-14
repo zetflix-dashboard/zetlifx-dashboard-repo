@@ -9,8 +9,10 @@ export const PALETTE = Object.freeze([
   '#507d88',
 ]);
 export function chartTheme() {
-  const style = getComputedStyle(document.documentElement);
-  const token = (key, fallback) => style.getPropertyValue(key).trim() || fallback;
+  // Unit tests run without a DOM; browser rendering reads the same CSS tokens.
+  const style =
+    typeof getComputedStyle === 'function' ? getComputedStyle(document.documentElement) : null;
+  const token = (key, fallback) => style?.getPropertyValue(key).trim() || fallback;
   return {
     palette: token('--chart-palette', PALETTE.join(','))
       .split(',')
