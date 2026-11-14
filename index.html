@@ -5,6 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f6f7f9" />
     <title>Зетфликс — аналитика</title>
+    <script>
+      // Apply the saved (or OS) appearance before the first paint.
+      (() => {
+        let saved;
+        try {
+          saved = localStorage.getItem('zetflix.theme');
+        } catch {
+          // Storage can be blocked.
+        }
+        document.documentElement.dataset.theme =
+          saved === 'light' || saved === 'dark'
+            ? saved
+            : matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+      })();
+    </script>
   </head>
   <body>
     <a class="skip-link" href="#workspace-panel">К графикам</a>
@@ -15,6 +32,7 @@
       >
       <div class="top-actions">
         <span id="save-state" role="status"></span
+        ><button id="theme-toggle" class="theme-toggle" type="button" aria-label="Переключить тему"></button
         ><button id="edit-btn" aria-pressed="false">Настроить</button>
         <details class="app-menu">
           <summary aria-label="Действия с пространствами">Ещё</summary>
@@ -54,7 +72,7 @@
           <button id="add-btn" class="primary">Добавить график</button
           ><button id="undo-btn">Отменить</button><button id="redo-btn">Повторить</button>
         </div>
-        <span>Перетаскивайте карточки · стрелки на кнопке «Переместить», Shift — размер</span>
+        <span>Перемещайте графики за значок с точками, меняйте размер за края и углы · стрелки перемещают, Shift + стрелки меняют размер</span>
       </div>
       <p id="message" class="message" role="status" aria-live="polite" hidden></p>
       <section id="workspace-panel" role="tabpanel" tabindex="0">
