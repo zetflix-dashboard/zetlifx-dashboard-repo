@@ -327,7 +327,6 @@ window.addEventListener('pagehide', (event) => {
     void data.dispose();
   }
 });
-syncPeriod();
 render();
 byId('save-state').textContent = 'Макет в этом браузере';
 if (loaded.warning) message(loaded.warning);
