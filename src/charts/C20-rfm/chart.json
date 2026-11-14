@@ -6,17 +6,11 @@
   "template": "table",
   "columns": [
     "segment",
-    "recency_score",
-    "frequency_score",
-    "monetary_score",
     "users",
     "revenue",
     "share_pct"
   ],
   "columnBars": [
-    "recency_score",
-    "frequency_score",
-    "monetary_score",
     "users",
     "revenue",
     "share_pct"
