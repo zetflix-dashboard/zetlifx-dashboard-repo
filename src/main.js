@@ -13,11 +13,13 @@ import {
 } from './layout/WorkspaceStore.js';
 import { validateLayout } from './layout/LayoutStorage.js';
 import { datasets } from './shared/data/datasets.js';
+import { initTheme } from './shared/ui/theme.js';
 const byId = (id) => document.getElementById(id);
 const known = (id) => ChartRegistry.has(id);
 const filters = new FilterStore();
 const data = new DataClient();
 const charts = new ChartManager(data, filters);
+initTheme(document.getElementById('theme-toggle'), () => charts.applyTheme());
 let storage;
 try {
   storage = window.localStorage;
