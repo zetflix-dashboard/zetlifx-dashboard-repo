@@ -79,7 +79,7 @@ export class GridManager {
       grip.append(createIcon('grip'));
       const edit = element('button', 'heading-edit', 'Изменить');
       edit.type = 'button';
-      edit.addEventListener('click', () => this.onEditHeading(widget.instanceId, widget.title));
+      edit.addEventListener('click', () => this.onEditHeading(widget.instanceId, this.items.get(widget.instanceId).title));
       const remove = element('button', 'widget-remove', '×');
       remove.type = 'button';
       remove.setAttribute('aria-label', 'Удалить заголовок: ' + widget.title);
