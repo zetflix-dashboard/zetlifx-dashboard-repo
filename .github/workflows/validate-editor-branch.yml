@@ -1,0 +1,54 @@
+name: One-time validate editor and SQL
+on:
+  push:
+    branches: [admin/tables-filters-headings-editor]
+    paths: [.github/workflows/validate-editor-branch.yml]
+permissions:
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: npm ci --no-audit --no-fund
+      - run: pip install -q duckdb
+      - name: Format and test application
+        run: |
+          npx prettier --write "src/**/*.{js,json,css}" "tests/**/*.js" index.html ".github/workflows/*.yml"
+          npm run check
+      - name: Verify SQL and local parameter isolation against real Parquet
+        run: |
+          node --input-type=module -e "import {datasets} from './src/shared/data/datasets.js'; import {writeFileSync} from 'node:fs'; writeFileSync('/tmp/sql.json',JSON.stringify(Object.fromEntries(['originalsViewing','titleCostPerHour'].map(k=>[k,datasets[k].sql]))))"
+          python - <<'PY'
+          import duckdb,json,os
+          os.chdir('public/data')
+          con=duckdb.connect()
+          q=json.load(open('/tmp/sql.json'))
+          for name in q:
+              sql=q[name]
+              assert sql.count('?') == 3
+              full=con.execute(sql,['2024-01-01','2025-12-01','all']).fetchall()
+              assert full, (name,'missing full data')
+              filter_value='Драма' if name=='titleCostPerHour' else 'Подписка'
+              subset=con.execute(sql,['2024-01-01','2025-12-01',filter_value]).fetchall()
+              assert subset, (name, 'missing subset')
+              if name=='titleCostPerHour': assert len(subset)<len(full)
+              else: assert sum(r[-1] for r in subset)<sum(r[-1] for r in full)
+              print(name,'full',len(full),'filtered',len(subset))
+          PY
+      - name: Commit formatting changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src tests index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "style: apply repository formatter to editor enhancements"
+            git push origin HEAD:admin/tables-filters-headings-editor
+          fi
