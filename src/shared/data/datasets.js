@@ -37,7 +37,7 @@ const SQL_C15 = [
   'SELECT CAST(t.origin AS VARCHAR) AS origin, CAST(SUM(w.hours) AS DOUBLE) AS hours',
   "FROM watch w JOIN read_parquet('content_titles.parquet') t USING (title_id)",
   'GROUP BY t.origin ORDER BY hours DESC',
-].join('\\n');
+].join('\n');
 
 // C14: amortization and viewing are separate monthly fact grains: aggregate prior to joining.
 const SQL_C14 = [
@@ -60,7 +60,7 @@ const SQL_C14 = [
   '  CAST(a.expense / NULLIF(w.hours, 0) AS DOUBLE) AS cost_per_hour',
   "FROM amort a JOIN watch w USING (title_id) JOIN read_parquet('content_titles.parquet') t USING (title_id)",
   'WHERE w.hours > 0 ORDER BY hours DESC',
-].join('\\n');
+].join('\n');
 
 // C20: fixed 31.12.2025 snapshot. No shared period filter is applicable.
 const SQL_C20 = [
@@ -107,7 +107,7 @@ const SQL_C20 = [
   '  CAST(revenue AS DOUBLE) AS revenue,',
   '  CAST(100.0 * revenue / NULLIF(SUM(revenue) OVER (), 0) AS DOUBLE) AS share_pct',
   'FROM groups ORDER BY revenue DESC',
-].join('\\n');
+].join('\n');
 
 export const datasets = Object.freeze({
   originalsViewing: {
