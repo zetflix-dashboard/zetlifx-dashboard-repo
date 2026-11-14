@@ -8,16 +8,30 @@ export const PALETTE = Object.freeze([
   '#bf5760',
   '#507d88',
 ]);
-export function buildOption(definition, rows, reducedMotion = false) {
+export function chartTheme() {
+  const style = getComputedStyle(document.documentElement);
+  const token = (key, fallback) => style.getPropertyValue(key).trim() || fallback;
+  return {
+    palette: token('--chart-palette', PALETTE.join(',')).split(',').map((c) => c.trim()),
+    text: token('--chart-text', '#475569'),
+    axis: token('--chart-axis', '#64748b'),
+    grid: token('--chart-grid', '#e9edf2'),
+    tooltip: token('--chart-tooltip', '#ffffff'),
+    tooltipText: token('--chart-tooltip-text', '#182333'),
+    border: token('--chart-border', '#dce2e9'),
+  };
+}
+
+export function buildOption(definition, rows, reducedMotion = false, theme = chartTheme()) {
   const fields = datasets[definition.dataset].fields;
   const units = [...new Set(definition.series.map((s) => fields[s.field].unit))];
   const scatter = definition.template === 'scatter';
   return {
     backgroundColor: 'transparent',
-    color: PALETTE,
+    color: theme.palette,
     animation: !reducedMotion,
     animationDuration: 200,
-    textStyle: { fontFamily: 'Inter, system-ui, sans-serif', fontSize: 12, color: '#475569' },
+    textStyle: { fontFamily: 'Inter, system-ui, sans-serif', fontSize: 12, color: theme.text },
     aria: { enabled: true, description: definition.question, decal: { show: true } },
     grid: { left: 12, right: 16, top: 50, bottom: 12, containLabel: true },
     legend: {
@@ -27,15 +41,15 @@ export function buildOption(definition, rows, reducedMotion = false) {
       right: 8,
       itemWidth: 12,
       itemHeight: 8,
-      textStyle: { color: '#475569', fontSize: 12 },
+      textStyle: { color: theme.text, fontSize: 12 },
     },
     tooltip: {
       trigger: scatter ? 'item' : 'axis',
       renderMode: 'richText',
       confine: true,
-      backgroundColor: '#ffffff',
-      borderColor: '#dce2e9',
-      textStyle: { color: '#182333', fontSize: 12 },
+      backgroundColor: theme.tooltip,
+      borderColor: theme.border,
+      textStyle: { color: theme.tooltipText, fontSize: 12 },
     },
     xAxis: {
       type: scatter ? 'value' : 'category',
@@ -43,24 +57,24 @@ export function buildOption(definition, rows, reducedMotion = false) {
         ? undefined
         : rows.map((r) => formatValue(r[definition.dimension], fields[definition.dimension].unit)),
       axisLabel: {
-        color: '#64748b',
+        color: theme.axis,
         hideOverlap: true,
         formatter: scatter
           ? (v) => formatValue(v, fields[definition.dimension].unit, true)
           : undefined,
       },
-      axisLine: { lineStyle: { color: '#dce2e9' } },
+      axisLine: { lineStyle: { color: theme.border } },
       axisTick: { show: false },
       splitLine: { show: false },
     },
     yAxis: units.map((unit, i) => ({
       type: 'value',
       name: unit === 'rub' ? '₽' : unit === 'percent' ? '%' : '',
-      nameTextStyle: { color: '#64748b' },
-      axisLabel: { color: '#64748b', formatter: (v) => formatValue(v, unit, true) },
+      nameTextStyle: { color: theme.axis },
+      axisLabel: { color: theme.axis, formatter: (v) => formatValue(v, unit, true) },
       axisLine: { show: false },
       axisTick: { show: false },
-      splitLine: { show: i === 0, lineStyle: { color: '#e9edf2', type: 'dashed' } },
+      splitLine: { show: i === 0, lineStyle: { color: theme.grid, type: 'dashed' } },
     })),
     series: definition.series.map((series, i) => {
       const unit = fields[series.field].unit;
