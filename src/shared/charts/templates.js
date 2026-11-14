@@ -196,5 +196,25 @@ export function renderTable(container, definition, rows) {
       }
     }
   }
+  if (definition.totals?.length && rows.length) {
+    const footer = table.createTFoot().insertRow();
+    footer.className = 'data-table-totals';
+    for (const field of columns) {
+      const cell = footer.insertCell();
+      if (field === columns[0]) {
+        cell.textContent = 'Итого';
+        cell.className = 'total-label';
+      } else if (definition.totals.includes(field)) {
+        const sum = rows.reduce((acc, row) => {
+          const value = row[field];
+          return value == null ? acc : acc + Number(value);
+        }, 0);
+        cell.textContent = formatValue(sum, fields[field].unit);
+        cell.className = 'numeric';
+      } else {
+        cell.textContent = '—';
+      }
+    }
+  }
   container.replaceChildren(table);
 }

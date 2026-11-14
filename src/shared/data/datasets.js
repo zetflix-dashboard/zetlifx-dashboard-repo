@@ -25,12 +25,14 @@ const SQL1 = [
 
 // C15: subscription-access viewing hours, independently aggregated before joining titles.
 const SQL_C15 = [
-  'WITH watch AS (',
+  'WITH selection AS (SELECT CAST(? AS DATE) AS first, CAST(? AS DATE) AS last, CAST(? AS VARCHAR) AS access), watch AS (',
   '  SELECT v.title_id, SUM(v.hours_watched) AS hours',
   "  FROM read_parquet('viewing_daily.parquet') v",
   "  JOIN read_parquet('users.parquet') u USING (user_id)",
-  '  WHERE v.view_date >= CAST(? AS DATE) AND v.view_date <= last_day(CAST(? AS DATE))',
+  '  CROSS JOIN selection f',
+  '  WHERE v.view_date >= f.first AND v.view_date <= last_day(f.last)',
   "    AND NOT u.is_test AND v.access_type IN ('Подписка', 'Пробный период', 'Партнерский пакет')",
+  "    AND (f.access = 'all' OR v.access_type = f.access)",
   '  GROUP BY v.title_id',
   ')',
   'SELECT CAST(t.origin AS VARCHAR) AS origin, CAST(SUM(w.hours) AS DOUBLE) AS hours',
@@ -40,7 +42,7 @@ const SQL_C15 = [
 
 // C14: amortization and viewing are separate monthly fact grains: aggregate prior to joining.
 const SQL_C14 = [
-  'WITH bounds AS (SELECT CAST(? AS DATE) AS first, CAST(? AS DATE) AS last),',
+  'WITH bounds AS (SELECT CAST(? AS DATE) AS first, CAST(? AS DATE) AS last, CAST(? AS VARCHAR) AS genre),',
   'amort AS (',
   '  SELECT a.title_id, SUM(a.amortization_amount) AS expense',
   "  FROM read_parquet('content_amortization.parquet') a CROSS JOIN bounds b",
@@ -57,8 +59,8 @@ const SQL_C14 = [
   ')',
   'SELECT CAST(t.title_name AS VARCHAR) AS title, CAST(w.hours AS DOUBLE) AS hours,',
   '  CAST(a.expense / NULLIF(w.hours, 0) AS DOUBLE) AS cost_per_hour',
-  "FROM amort a JOIN watch w USING (title_id) JOIN read_parquet('content_titles.parquet') t USING (title_id)",
-  'WHERE w.hours > 0 ORDER BY hours DESC',
+  "FROM amort a JOIN watch w USING (title_id) JOIN read_parquet('content_titles.parquet') t USING (title_id) CROSS JOIN bounds b",
+  "WHERE w.hours > 0 AND (b.genre = 'all' OR t.genre = b.genre) ORDER BY hours DESC",
 ].join('\n');
 
 // C20: fixed 31.12.2025 snapshot. No shared period filter is applicable.
@@ -116,6 +118,18 @@ export const datasets = Object.freeze({
     grain: 'происхождение контента за период',
     dateRole: 'дата просмотра',
     filters: ['period'],
+    localFilters: [
+      {
+        id: 'access',
+        label: 'Доступ',
+        options: [
+          { value: 'all', label: 'Все виды доступа' },
+          { value: 'Подписка', label: 'Подписка' },
+          { value: 'Пробный период', label: 'Пробный период' },
+          { value: 'Партнерский пакет', label: 'Партнёрский пакет' },
+        ],
+      },
+    ],
     limitation:
       'Только часы подписочного доступа, пробных периодов и партнёрских пакетов; аренда и тестовые пользователи исключены.',
     fields: {
@@ -135,6 +149,27 @@ export const datasets = Object.freeze({
     grain: 'тайтл за выбранный период',
     dateRole: 'месяц амортизации и дата просмотра',
     filters: ['period'],
+    localFilters: [
+      {
+        id: 'genre',
+        label: 'Жанр',
+        options: [
+          { value: 'all', label: 'Все жанры' },
+          ...[
+            'Драма',
+            'Комедия',
+            'Мультфильм',
+            'Детектив',
+            'Триллер',
+            'Боевик',
+            'Фантастика',
+            'Мелодрама',
+            'Документальный',
+            'Ужасы',
+          ].map((value) => ({ value, label: value })),
+        ],
+      },
+    ],
     limitation:
       'Амортизация за выбранные месяцы делится на часы подписочного просмотра за те же месяцы. Тайтлы с нулём часов исключены.',
     fields: {

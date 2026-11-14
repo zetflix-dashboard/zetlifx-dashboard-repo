@@ -104,15 +104,30 @@
           </div>
         </div>
       </div>
-      <div id="editor-bar" class="editor-bar" hidden>
-        <div>
-          <button id="add-btn" class="primary">Добавить график</button
-          ><button id="undo-btn">Отменить</button><button id="redo-btn">Повторить</button>
-        </div>
-        <span
-          >Перемещайте графики за значок с точками, меняйте размер за края и углы · стрелки
-          перемещают, Shift + стрелки меняют размер</span
-        >
+      <div
+        id="editor-bar"
+        class="editor-bar"
+        role="toolbar"
+        aria-label="Редактирование дашборда"
+        hidden
+      >
+        <button id="add-btn" class="primary" type="button">Добавить график</button>
+        <button id="add-heading-btn" type="button">Добавить заголовок</button>
+        <span class="editor-separator" aria-hidden="true"></span>
+        <button
+          id="undo-btn"
+          class="editor-icon"
+          type="button"
+          aria-label="Отменить"
+          title="Отменить"
+        ></button>
+        <button
+          id="redo-btn"
+          class="editor-icon"
+          type="button"
+          aria-label="Повторить"
+          title="Повторить"
+        ></button>
       </div>
       <p id="message" class="message" role="status" aria-live="polite" hidden></p>
       <section id="workspace-panel" role="tabpanel" tabindex="0">
@@ -127,6 +142,17 @@
         </div>
       </section>
     </main>
+    <dialog id="heading-dialog">
+      <form id="heading-form">
+        <h2 id="heading-dialog-title">Заголовок</h2>
+        <label for="heading-text">Текст заголовка</label>
+        <input id="heading-text" maxlength="100" autocomplete="off" required />
+        <div class="dialog-actions">
+          <button id="cancel-heading" type="button">Отмена</button>
+          <button class="primary" type="submit">Сохранить</button>
+        </div>
+      </form>
+    </dialog>
     <dialog id="catalog">
       <form method="dialog" class="dialog-heading">
         <div>

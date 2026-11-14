@@ -9,7 +9,7 @@ import {
 import { CanvasRenderer } from 'echarts/renderers';
 import { ChartRegistry } from './ChartRegistry.js';
 import { datasets } from '../data/datasets.js';
-import { dateRange } from '../filters/FilterStore.js';
+import { datasetQueryParams, validateLocalFilters } from '../filters/LocalFilters.js';
 import { validateRows } from './contract.js';
 import { buildOption, renderTable } from './templates.js';
 echarts.use([
@@ -30,7 +30,7 @@ export class ChartManager {
     this.sessions = new Map();
     this.unsubscribe = filters.subscribe(() => this.refreshAll());
   }
-  mount(instanceId, chartId, container) {
+  mount(instanceId, chartId, container, localFilters = {}) {
     const definition = ChartRegistry.get(chartId);
     if (!definition) throw new Error('Неизвестный график');
     const node = document.createElement('div');
@@ -41,6 +41,7 @@ export class ChartManager {
     container.append(node, overlay);
     const session = {
       definition,
+      localFilters: validateLocalFilters(definition, localFilters),
       node,
       overlay,
       chart: null,
@@ -69,6 +70,14 @@ export class ChartManager {
       );
     }
   }
+  setLocalFilters(id, next) {
+    const session = this.sessions.get(id);
+    if (!session) return;
+    const normalized = validateLocalFilters(session.definition, next);
+    if (JSON.stringify(normalized) === JSON.stringify(session.localFilters)) return;
+    session.localFilters = normalized;
+    void this.refreshOne(id);
+  }
   toggleTable(id) {
     const s = this.sessions.get(id);
     if (!s || s.definition.template === 'table') return false;
@@ -94,7 +103,7 @@ export class ChartManager {
       const rows = await this.data.query(
         dataset.sources,
         dataset.sql,
-        dataset.filters.includes('period') ? dateRange(this.filters.get()) : [],
+        datasetQueryParams(s.definition, this.filters.get(), s.localFilters),
         controller.signal,
       );
       if (this.sessions.get(id) !== s || request !== s.request) return;
