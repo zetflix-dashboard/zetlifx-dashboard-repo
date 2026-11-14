@@ -1,72 +1,275 @@
 import './style.css';
-import initialLayout from './dashboards/overview.json';
 import { ChartRegistry } from './shared/charts/ChartRegistry.js';
 import { ChartManager } from './shared/charts/ChartManager.js';
 import { DataClient } from './shared/data/DataClient.js';
-import { FilterStore, MIN_MONTH, MAX_MONTH } from './shared/filters/FilterStore.js';
+import { FilterStore } from './shared/filters/FilterStore.js';
 import { GridManager } from './layout/GridManager.js';
-import { LayoutHistory, validateLayout, readLocalLayout, writeLocalLayout, downloadLayout } from './layout/LayoutStorage.js';
-
+import {
+  WorkspaceStore,
+  WORKSPACE_KEY,
+  createWorkspace,
+  loadWorkspace,
+  validateWorkspace,
+} from './layout/WorkspaceStore.js';
+import { validateLayout } from './layout/LayoutStorage.js';
+import { datasets } from './shared/data/datasets.js';
 const byId = (id) => document.getElementById(id);
-const knownChart = (id) => ChartRegistry.has(id);
-const defaults = validateLayout(initialLayout, knownChart);
+const known = (id) => ChartRegistry.has(id);
 const filters = new FilterStore();
-
-const data = new DataClient((status, label) => {
-  byId('engine-status').textContent = label;
-  byId('engine-status-dot').className = 'status-dot' + (status === 'ready' ? ' ready' : status === 'error' ? ' error' : '');
-});
+const data = new DataClient();
 const charts = new ChartManager(data, filters);
-const starting = readLocalLayout(defaults, knownChart);
-const history = new LayoutHistory(starting);
-let lastSaved = JSON.stringify(starting);
+let storage;
+try {
+  storage = window.localStorage;
+} catch {
+  /* blocked storage remains explicit in UI */
+}
+const loaded = loadWorkspace(createWorkspace(ChartRegistry.list()), known, storage);
+const store = new WorkspaceStore(loaded.state, known);
+let recovery = Boolean(loaded.recovery);
 let editing = false;
-let messageTimer;
-
+let naming = 'create';
+let confirmAction;
+let saveTimer;
+let saved = false;
+const grid = new GridManager(byId('dashboard-grid'), charts, (layout) => {
+  try {
+    store.changeActive({ widgets: layout.widgets });
+    persist();
+    syncControls();
+  } catch (error) {
+    message(error.message);
+    render();
+  }
+});
 function message(text) {
   byId('message').textContent = text;
-  clearTimeout(messageTimer);
-  messageTimer = setTimeout(() => { byId('message').textContent = ''; }, 6500);
+  byId('message').hidden = !text;
 }
-
-const grid = new GridManager(byId('dashboard-grid'), charts, (layout) => {
-  history.push(layout);
-  syncControls();
-});
-
-function syncControls() {
-  const current = grid.getLayout();
-  byId('widget-count').textContent = grid.count() + ' видж.';
-  byId('empty-layout').classList.toggle('hidden', grid.count() > 0);
-  byId('undo-btn').disabled = !history.canUndo;
-  byId('redo-btn').disabled = !history.canRedo;
-  const dirty = JSON.stringify(current) !== lastSaved;
-  byId('layout-state').textContent = dirty ? 'Несохранённые изменения' : 'Все изменения сохранены';
+function persist() {
+  clearTimeout(saveTimer);
+  saved = false;
+  byId('save-state').textContent = 'Сохранение…';
+  saveTimer = setTimeout(flush, 250);
 }
-
-grid.replace(starting);
-syncControls();
-
-function months() {
-  const result = [];
-  for (let year = 2024; year <= 2025; year++) {
-    for (let month = 1; month <= 12; month++) {
-      const id = String(year) + '-' + String(month).padStart(2, '0');
-      const label = new Intl.DateTimeFormat('ru-RU', { month: 'short', year: 'numeric' }).format(new Date(year, month - 1, 1));
-      result.push({ id, label });
+function flush() {
+  clearTimeout(saveTimer);
+  try {
+    if (recovery) {
+      const original = storage.getItem(WORKSPACE_KEY);
+      if (original) storage.setItem(WORKSPACE_KEY + '.recovery.' + Date.now(), original);
+      recovery = false;
     }
-  }
-  return result;
-}
-for (const name of ['period-from', 'period-to']) {
-  const select = byId(name);
-  for (const month of months()) {
-    const option = document.createElement('option');
-    option.value = month.id;
-    option.textContent = month.label;
-    select.append(option);
+    storage.setItem(WORKSPACE_KEY, JSON.stringify(store.current()));
+    saved = true;
+    byId('save-state').textContent = 'Сохранено в браузере';
+  } catch {
+    byId('save-state').textContent = 'Не сохранено';
+    message(
+      'Сохранение в браузере недоступно. Экспортируйте пространства через «Ещё», чтобы не потерять изменения.',
+    );
   }
 }
+function syncControls() {
+  byId('undo-btn').disabled = !store.past.length;
+  byId('redo-btn').disabled = !store.future.length;
+  const active = store.active();
+  byId('empty-layout').hidden = Boolean(active?.widgets.length);
+  byId('empty-title').textContent = active
+    ? 'Пространство для ваших данных'
+    : 'Создайте первое пространство';
+  byId('empty-description').textContent = active
+    ? 'Добавьте графики из каталога. Макет можно менять в любой момент.'
+    : 'Разделяйте аналитику по задачам, темам или командам.';
+  byId('empty-action').textContent = active ? 'Добавить график' : 'Создать пространство';
+  byId('add-btn').disabled = !active;
+  byId('rename-space').disabled = !active;
+  byId('delete-space').disabled = !active;
+}
+function renderTabs() {
+  const tabs = byId('space-tabs');
+  tabs.replaceChildren();
+  for (const space of store.state.spaces) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.role = 'tab';
+    button.id = 'tab-' + space.id;
+    button.textContent = space.title;
+    button.title = space.title;
+    button.setAttribute('aria-selected', String(space.id === store.state.activeId));
+    button.setAttribute('aria-controls', 'workspace-panel');
+    button.tabIndex = space.id === store.state.activeId ? 0 : -1;
+    button.addEventListener('click', () => {
+      store.select(space.id);
+      persist();
+      render();
+      byId(button.id)?.focus();
+    });
+    tabs.append(button);
+  }
+  if (store.active())
+    byId('workspace-panel').setAttribute('aria-labelledby', 'tab-' + store.state.activeId);
+  else {
+    byId('workspace-panel').removeAttribute('aria-labelledby');
+    byId('workspace-panel').setAttribute('aria-label', 'Пустой дашборд');
+  }
+}
+byId('space-tabs').addEventListener('keydown', (event) => {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+  const tabs = [...byId('space-tabs').children];
+  const index = tabs.indexOf(document.activeElement);
+  if (index < 0) return;
+  event.preventDefault();
+  const next =
+    event.key === 'Home'
+      ? 0
+      : event.key === 'End'
+        ? tabs.length - 1
+        : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+  // Manual activation: arrows move focus, Enter/Space loads the selected space.
+  tabs.forEach((tab, i) => {
+    tab.tabIndex = i === next ? 0 : -1;
+  });
+  tabs[next].focus();
+});
+function render() {
+  renderTabs();
+  grid.replace({ version: 1, dashboardId: 'current', widgets: store.active()?.widgets || [] });
+  syncControls();
+}
+function setEditing(value) {
+  editing = value;
+  grid.setEditing(editing);
+  byId('editor-bar').hidden = !editing;
+  byId('edit-btn').textContent = editing ? 'Готово' : 'Настроить';
+  byId('edit-btn').setAttribute('aria-pressed', String(editing));
+}
+byId('edit-btn').addEventListener('click', () => setEditing(!editing));
+function openName(mode) {
+  naming = mode;
+  byId('space-dialog-title').textContent =
+    mode === 'create' ? 'Новое пространство' : 'Переименовать пространство';
+  byId('space-name').value = mode === 'create' ? '' : store.active().title;
+  byId('space-dialog').showModal();
+  byId('space-name').focus();
+}
+byId('create-space').addEventListener('click', () => openName('create'));
+byId('rename-space').addEventListener('click', () => openName('rename'));
+byId('cancel-space').addEventListener('click', () => byId('space-dialog').close());
+byId('space-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  try {
+    const name = byId('space-name').value.trim();
+    if (naming === 'create') store.create(name, crypto.randomUUID());
+    else store.changeActive({ title: name });
+    byId('space-dialog').close();
+    persist();
+    render();
+    byId('tab-' + store.state.activeId)?.focus();
+  } catch (error) {
+    byId('space-name').setCustomValidity(error.message);
+    byId('space-name').reportValidity();
+  }
+});
+byId('space-name').addEventListener('input', (event) => event.target.setCustomValidity(''));
+function confirm(title, text, action) {
+  confirmAction = action;
+  byId('confirm-title').textContent = title;
+  byId('confirm-text').textContent = text;
+  byId('confirm-dialog').returnValue = '';
+  byId('confirm-dialog').showModal();
+}
+byId('confirm-dialog').addEventListener('close', () => {
+  if (byId('confirm-dialog').returnValue === 'confirm') confirmAction?.();
+  confirmAction = null;
+});
+byId('delete-space').addEventListener('click', () =>
+  confirm(
+    'Удалить «' + store.active().title + '»?',
+    'Графики останутся в каталоге. Удаление пространства можно отменить в настройке макета.',
+    () => {
+      store.removeActive();
+      persist();
+      render();
+    },
+  ),
+);
+function history(direction) {
+  store[direction]();
+  persist();
+  render();
+}
+byId('undo-btn').addEventListener('click', () => history('undo'));
+byId('redo-btn').addEventListener('click', () => history('redo'));
+document.addEventListener('keydown', (event) => {
+  if (
+    !editing ||
+    document.querySelector('dialog[open]') ||
+    !(event.ctrlKey || event.metaKey) ||
+    event.target.closest('input,select,textarea,[contenteditable]') ||
+    event.key.toLowerCase() !== 'z'
+  )
+    return;
+  event.preventDefault();
+  history(event.shiftKey ? 'redo' : 'undo');
+});
+function openCatalog() {
+  byId('catalog-search').value = '';
+  filterCatalog('');
+  byId('catalog').showModal();
+  byId('catalog-search').focus();
+}
+byId('add-btn').addEventListener('click', openCatalog);
+byId('empty-action').addEventListener('click', () =>
+  store.active() ? openCatalog() : openName('create'),
+);
+for (const chart of ChartRegistry.list()) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'catalog-option';
+  const title = document.createElement('strong');
+  title.textContent = chart.title;
+  const label = document.createElement('span');
+  label.textContent = chart.id + ' · ' + datasets[chart.dataset].label;
+  button.append(title, label);
+  button.dataset.search = (chart.id + ' ' + chart.title).toLocaleLowerCase('ru-RU');
+  button.addEventListener('click', () => {
+    if (grid.count() >= 100) {
+      message('В пространстве допускается до 100 карточек. Создайте ещё одно.');
+      byId('catalog').close();
+      return;
+    }
+    grid.addOne({
+      chartId: chart.id,
+      instanceId: crypto.randomUUID(),
+      x: 0,
+      y: grid.getNextRow(),
+      ...chart.defaultSize,
+    });
+    byId('catalog').close();
+  });
+  byId('catalog-items').append(button);
+}
+function filterCatalog(value) {
+  const query = value.trim().toLocaleLowerCase('ru-RU');
+  const buttons = [...byId('catalog-items').children];
+  buttons.forEach((button) => {
+    button.hidden = !button.dataset.search.includes(query);
+  });
+  byId('catalog-empty').hidden = buttons.some((button) => !button.hidden);
+}
+byId('catalog-search').addEventListener('input', (event) => filterCatalog(event.target.value));
+for (const name of ['period-from', 'period-to'])
+  for (let year = 2024; year <= 2025; year++)
+    for (let month = 1; month <= 12; month++) {
+      const option = document.createElement('option');
+      option.value = year + '-' + String(month).padStart(2, '0');
+      option.textContent = new Intl.DateTimeFormat('ru-RU', {
+        month: 'short',
+        year: 'numeric',
+      }).format(new Date(year, month - 1, 1));
+      byId(name).append(option);
+    }
 function syncPeriod() {
   byId('period-from').value = filters.get().periodFrom;
   byId('period-to').value = filters.get().periodTo;
@@ -79,104 +282,77 @@ function applyPeriod() {
     syncPeriod();
   }
 }
-syncPeriod();
 byId('period-from').addEventListener('change', applyPeriod);
 byId('period-to').addEventListener('change', applyPeriod);
 byId('filters-reset').addEventListener('click', () => {
   filters.reset();
   syncPeriod();
 });
-byId('edit-btn').addEventListener('click', () => {
-  editing = !editing;
-  grid.setEditing(editing);
-  byId('editor-bar').classList.toggle('hidden', !editing);
-  byId('edit-btn').textContent = editing ? '✓ Завершить настройку' : '✎ Настроить макет';
-  byId('edit-btn').setAttribute('aria-pressed', String(editing));
-  if (!editing) byId('catalog').classList.add('hidden');
-  syncControls();
-});
-
-function applyHistoryLayout(layout) {
-  grid.replace(validateLayout(layout, knownChart));
-  syncControls();
-}
-byId('undo-btn').addEventListener('click', () => { if (history.canUndo) applyHistoryLayout(history.undo()); });
-byId('redo-btn').addEventListener('click', () => { if (history.canRedo) applyHistoryLayout(history.redo()); });
-byId('save-btn').addEventListener('click', () => {
-  try {
-    const layout = validateLayout(grid.getLayout(), knownChart);
-    writeLocalLayout(layout, knownChart);
-    lastSaved = JSON.stringify(layout);
-    syncControls();
-    message('Макет сохранён в этом браузере');
-  } catch (error) {
-    message('Сохранение не удалось: ' + error.message);
-  }
-});
-byId('reset-layout-btn').addEventListener('click', () => {
-  grid.replace(defaults);
-  history.push(grid.getLayout());
-  syncControls();
-  message('Стандартный макет восстановлен. Нажмите «Сохранить» для закрепления.');
-});
 byId('export-btn').addEventListener('click', () => {
-  try { downloadLayout(validateLayout(grid.getLayout(), knownChart)); }
-  catch (error) { message(error.message); }
+  const url = URL.createObjectURL(
+    new Blob([JSON.stringify(store.current(), null, 2)], { type: 'application/json' }),
+  );
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'zetflix-workspaces.json';
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
+byId('import-btn').addEventListener('click', () => byId('import-file').click());
 byId('import-file').addEventListener('change', async (event) => {
   const file = event.target.files[0];
   if (!file) return;
   try {
-    if (file.size > 100000) throw new Error('Макет слишком большой');
-    const incoming = validateLayout(JSON.parse(await file.text()), knownChart);
-    grid.replace(incoming);
-    history.push(grid.getLayout());
-    syncControls();
-    message('Макет загружен. Сохраните его при необходимости.');
+    if (file.size > 1000000) throw new Error('Файл больше 1 МБ');
+    let incoming = JSON.parse(await file.text());
+    if (incoming.version === 1) {
+      const old = validateLayout(incoming, known);
+      incoming = {
+        version: 2,
+        activeId: 'imported',
+        spaces: [{ id: 'imported', title: old.title, widgets: old.widgets }],
+      };
+    }
+    const state = validateWorkspace(incoming, known);
+    confirm(
+      'Импортировать пространства?',
+      'Текущие пространства будут заменены. Это действие можно отменить в настройке макета.',
+      () => {
+        store.commit(state);
+        persist();
+        render();
+      },
+    );
   } catch (error) {
     message('Ошибка импорта: ' + error.message);
   } finally {
     event.target.value = '';
   }
 });
-
-function addChart(chartId) {
-  const definition = ChartRegistry.get(chartId);
-  if (!definition) return;
-  const stamp = Math.random().toString(36).slice(2, 9);
-  const instanceId = chartId.toLowerCase() + '-' + stamp;
-  grid.addOne({
-    chartId, instanceId, x: 0, y: grid.getNextRow(),
-    w: definition.defaultSize.w, h: definition.defaultSize.h
-  });
-  byId('catalog').classList.add('hidden');
-}
-for (const chart of ChartRegistry.list()) {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'catalog-option';
-  const title = document.createElement('strong');
-  title.textContent = chart.id + ' · ' + chart.title;
-  const subtitle = document.createElement('span');
-  subtitle.textContent = chart.subtitle;
-  button.append(title, subtitle);
-  button.addEventListener('click', () => addChart(chart.id));
-  byId('catalog-items').append(button);
-}
-byId('add-btn').addEventListener('click', () => byId('catalog').classList.toggle('hidden'));
-byId('close-catalog').addEventListener('click', () => byId('catalog').classList.add('hidden'));
-
-// Keyboard shortcuts only when editing; avoid intercepting inputs/selectors.
-document.addEventListener('keydown', (event) => {
-  if (!editing || !(event.ctrlKey || event.metaKey) || event.target.closest('input,select,textarea')) return;
-  if (event.key.toLowerCase() !== 'z') return;
-  event.preventDefault();
-  if (event.shiftKey && history.canRedo) applyHistoryLayout(history.redo());
-  else if (!event.shiftKey && history.canUndo) applyHistoryLayout(history.undo());
+window.addEventListener('storage', (event) => {
+  if (event.key === WORKSPACE_KEY)
+    message(
+      'Пространства изменены в другой вкладке. Экспортируйте текущую версию перед перезагрузкой, если хотите её сохранить.',
+    );
 });
-
-window.addEventListener('pagehide', () => {
-  charts.dispose();
-  grid.dispose();
-  void data.dispose();
+window.addEventListener('beforeunload', (event) => {
+  if (!saved && store.past.length) {
+    flush();
+    if (!saved) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
+  }
 });
+window.addEventListener('pagehide', (event) => {
+  if (!event.persisted) {
+    if (store.past.length) flush();
+    charts.dispose();
+    grid.dispose();
+    void data.dispose();
+  }
+});
+syncPeriod();
+render();
+byId('save-state').textContent = 'Макет в этом браузере';
+if (loaded.warning) message(loaded.warning);

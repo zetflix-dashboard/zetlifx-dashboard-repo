@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateLayout, LayoutHistory, LAYOUT_VERSION } from '../src/layout/LayoutStorage.js';
+import { validateLayout, LAYOUT_VERSION } from '../src/layout/LayoutStorage.js';
 
 const fixture = () => ({
   version: LAYOUT_VERSION,
   dashboardId: 'overview',
-  widgets: [{ instanceId: 'one', chartId: 'C03', x: 0, y: 0, w: 6, h: 4 }]
+  widgets: [{ instanceId: 'one', chartId: 'C03', x: 0, y: 0, w: 6, h: 4 }],
 });
 const known = (id) => ['C03', 'C18'].includes(id);
 
@@ -26,14 +26,4 @@ test('rejects out-of-bounds cards', () => {
   const layout = fixture();
   layout.widgets[0].w = 13;
   assert.throws(() => validateLayout(layout, known), /координаты/);
-});
-test('history stores independent snapshots and supports undo redo', () => {
-  const history = new LayoutHistory(fixture());
-  const next = fixture();
-  next.widgets[0].x = 2;
-  history.push(next);
-  next.widgets[0].x = 3;
-  assert.equal(history.current().widgets[0].x, 2);
-  assert.equal(history.undo().widgets[0].x, 0);
-  assert.equal(history.redo().widgets[0].x, 2);
 });

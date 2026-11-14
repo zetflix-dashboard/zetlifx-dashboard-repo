@@ -1,0 +1,16 @@
+{
+  "id": "C18",
+  "title": "Эффективность рекламы",
+  "question": "Как меняются заполняемость рекламы и eCPM?",
+  "dataset": "advertisingMonthly",
+  "template": "line",
+  "dimension": "period",
+  "series": [
+    {
+      "field": "fill_pct"
+    },
+    {
+      "field": "ecpm"
+    }
+  ]
+}

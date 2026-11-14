@@ -1,9 +1,0 @@
-{
-  "version": 1,
-  "dashboardId": "overview",
-  "title": "Общий обзор",
-  "widgets": [
-    { "instanceId": "revenue", "chartId": "C03", "x": 0, "y": 0, "w": 8, "h": 4 },
-    { "instanceId": "advertising", "chartId": "C18", "x": 8, "y": 0, "w": 4, "h": 4 }
-  ]
-}

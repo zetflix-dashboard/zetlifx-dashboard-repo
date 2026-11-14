@@ -20,9 +20,11 @@ export class DataClient {
     this.tail = Promise.resolve();
     this.cache = new Map();
     this.cacheLimit = 40;
+    this.closed = false;
   }
 
   async init() {
+    if (this.closed) throw new Error('Data client is closed');
     if (this.conn) return this.conn;
     if (!this.starting) {
       this.onStatus('loading', 'Запуск DuckDB-Wasm…');
@@ -61,10 +63,18 @@ export class DataClient {
   }
 
   query(files, sql, params = [], signal) {
-    const key = JSON.stringify([files, sql, params, import.meta.env.VITE_DATA_VERSION || 'snapshot-2025']);
+    if (this.closed) return Promise.reject(new Error('Data client is closed'));
+    if (signal?.aborted) return Promise.reject(new DOMException('Query superseded', 'AbortError'));
+    const key = JSON.stringify([
+      files,
+      sql,
+      params,
+      import.meta.env.VITE_DATA_VERSION || 'snapshot-2025',
+    ]);
     if (this.cache.has(key)) return Promise.resolve(this.cache.get(key));
     const run = async () => {
       if (signal?.aborted) throw new DOMException('Query superseded', 'AbortError');
+      if (this.cache.has(key)) return this.cache.get(key);
       await this.init();
       for (const name of files) await this.ensureFile(name);
       if (signal?.aborted) throw new DOMException('Query superseded', 'AbortError');
@@ -86,16 +96,39 @@ export class DataClient {
       if (this.cache.size > this.cacheLimit) this.cache.delete(this.cache.keys().next().value);
       return rows;
     };
-    const pending = this.tail.then(run);
+    const pending = this.tail.then(run).catch(async (error) => {
+      if (error.name !== 'AbortError') {
+        // DuckDB may discard an HTTP file after a failed read while our URL
+        // registration remains cached. Reset only this query's files, inside
+        // the serial queue, so Retry can register them again safely.
+        for (const name of files) {
+          this.registered.delete(name);
+          try {
+            await this.db?.dropFile(name);
+          } catch {
+            /* A failed registration may already have removed the file. */
+          }
+        }
+      }
+      throw error;
+    });
     this.tail = pending.catch(() => {});
     return pending;
   }
 
-  clearCache() { this.cache.clear(); }
+  clearCache() {
+    this.cache.clear();
+  }
 
   async dispose() {
+    this.closed = true;
+    await this.tail;
     if (this.starting) {
-      try { await this.starting; } catch { /* failed initialization */ }
+      try {
+        await this.starting;
+      } catch {
+        /* failed initialization */
+      }
     }
     if (this.conn) await this.conn.close();
     if (this.db) await this.db.terminate();

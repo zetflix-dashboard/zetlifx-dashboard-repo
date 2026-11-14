@@ -1,0 +1,22 @@
+{
+  "id": "C03",
+  "title": "Выручка и операционная прибыль",
+  "question": "Как меняются выручка, прибыль и маржа по месяцам?",
+  "dataset": "financialMonthly",
+  "template": "combo",
+  "dimension": "period",
+  "series": [
+    {
+      "field": "net_revenue",
+      "type": "bar"
+    },
+    {
+      "field": "operating_profit",
+      "type": "bar"
+    },
+    {
+      "field": "margin_pct",
+      "type": "line"
+    }
+  ]
+}

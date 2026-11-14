@@ -1,5 +1,6 @@
 import { GridStack } from 'gridstack';
 import { ChartRegistry } from '../shared/charts/ChartRegistry.js';
+import { datasets } from '../shared/data/datasets.js';
 import { LAYOUT_VERSION } from './LayoutStorage.js';
 
 function element(tag, className, content) {
@@ -18,19 +19,26 @@ export class GridManager {
     this.silent = false;
     this.editing = false;
 
-    this.grid = GridStack.init({
-      column: 12,
-      cellHeight: 82,
-      margin: 5,
-      animate: true,
-      staticGrid: true,
-      draggable: { handle: '.widget-grip', scroll: true },
-      resizable: { handles: 'se' },
-      columnOpts: {
-        breakpoints: [{ w: 660, c: 1 }, { w: 1100, c: 6 }],
-        layout: 'list'
-      }
-    }, container);
+    this.grid = GridStack.init(
+      {
+        column: 12,
+        cellHeight: 76,
+        margin: 6,
+        animate: true,
+        staticGrid: true,
+        draggable: { handle: '.widget-grip', scroll: true },
+        resizable: { handles: 'se' },
+        columnOpts: {
+          columnMax: 12,
+          breakpoints: [
+            { w: 660, c: 1 },
+            { w: 1100, c: 6 },
+          ],
+          layout: 'list',
+        },
+      },
+      container,
+    );
     this.grid.on('dragstop resizestop', () => {
       if (!this.silent) this.onChange(this.getLayout());
       this.charts.resizeAll();
@@ -45,6 +53,15 @@ export class GridManager {
   }
 
   addOne(widget, notify = true) {
+    if (notify && !this.silent) {
+      // New cards also enter through the canonical layout, even when the
+      // catalogue is opened on a phone. Never persist a responsive width.
+      const layout = this.getLayout();
+      layout.widgets.push(widget);
+      this.replace(layout);
+      this.onChange(this.getLayout());
+      return;
+    }
     const definition = ChartRegistry.get(widget.chartId);
     if (!definition) throw new Error('График не найден: ' + widget.chartId);
     if (this.items.has(widget.instanceId)) throw new Error('Повтор ID карточки');
@@ -54,18 +71,62 @@ export class GridManager {
     const content = element('div', 'grid-stack-item-content');
     const head = element('div', 'widget-head');
     const titles = element('div', 'widget-titles');
-    titles.append(element('h3', '', definition.title), element('p', '', definition.subtitle));
+    titles.append(
+      element('h3', '', definition.title),
+      element('p', '', definition.id + ' · ' + datasets[definition.dataset].label),
+    );
     const actions = element('div', 'widget-actions');
-    const grip = element('button', 'widget-grip', '⠿');
+    const grip = element('button', 'widget-grip', 'Переместить');
     grip.type = 'button';
-    grip.title = 'Перетащить график';
+    grip.title = 'Перетащите или используйте стрелки; Shift + стрелки меняют размер';
+    grip.addEventListener('keydown', (event) => {
+      if (!this.editing || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key))
+        return;
+      event.preventDefault();
+      const n = item.gridstackNode;
+      const horizontal = ['ArrowLeft', 'ArrowRight'].includes(event.key);
+      const delta = ['ArrowLeft', 'ArrowUp'].includes(event.key) ? -1 : 1;
+      const column = this.grid.getColumn();
+      const patch = event.shiftKey
+        ? horizontal
+          ? {
+              w: Math.max(
+                Math.min(definition.minSize.w, column),
+                Math.min(column - n.x, n.w + delta),
+              ),
+            }
+          : { h: Math.max(definition.minSize.h, Math.min(20, n.h + delta)) }
+        : horizontal
+          ? { x: Math.max(0, Math.min(column - n.w, n.x + delta)) }
+          : { y: Math.max(0, Math.min(1000, n.y + delta)) };
+      this.grid.update(item, patch);
+      this.onChange(this.getLayout());
+    });
     grip.setAttribute('aria-label', 'Перетащить ' + definition.title);
     const remove = element('button', 'widget-remove', '×');
     remove.type = 'button';
     remove.title = 'Убрать график с макета';
     remove.setAttribute('aria-label', 'Убрать ' + definition.title);
     remove.addEventListener('click', () => this.removeOne(widget.instanceId));
-    actions.append(grip, remove);
+    const table = element('button', 'widget-table', 'Таблица');
+    table.type = 'button';
+    table.setAttribute('aria-label', 'Показать таблицу: ' + definition.title);
+    table.setAttribute('aria-pressed', 'false');
+    table.hidden = definition.template === 'table';
+    table.addEventListener('click', () => {
+      const active = this.charts.toggleTable(widget.instanceId);
+      table.textContent = active ? 'График' : 'Таблица';
+      table.setAttribute('aria-pressed', String(active));
+    });
+    const info = element('details', 'widget-info');
+    const summary = element('summary', '', 'О данных');
+    const description = element(
+      'p',
+      '',
+      definition.question + ' ' + datasets[definition.dataset].limitation + ' Фильтр: период.',
+    );
+    info.append(summary, description);
+    actions.append(table, info, grip, remove);
     head.append(titles, actions);
     const plot = element('div', 'widget-plot');
     content.append(head, plot);
@@ -73,9 +134,13 @@ export class GridManager {
     this.container.append(item);
 
     this.grid.makeWidget(item, {
-      id: widget.instanceId, x: widget.x, y: widget.y,
-      w: widget.w, h: widget.h,
-      minW: definition.minSize.w, minH: definition.minSize.h
+      id: widget.instanceId,
+      x: widget.x,
+      y: widget.y,
+      w: widget.w,
+      h: widget.h,
+      minW: definition.minSize.w,
+      minH: definition.minSize.h,
     });
     this.items.set(widget.instanceId, { item, chartId: widget.chartId });
     this.charts.mount(widget.instanceId, widget.chartId, plot);
@@ -93,12 +158,18 @@ export class GridManager {
 
   replace(layout) {
     this.silent = true;
+    const displayColumns = this.grid.getColumn();
+    // Load the saved desktop coordinates before applying responsive columns.
+    // Otherwise makeWidget clamps widths on a mobile first visit and loses
+    // the canonical layout before GridStack can cache it.
+    this.grid.column(12, 'none');
     this.grid.batchUpdate();
     try {
       for (const id of Array.from(this.items.keys())) this.removeOne(id, false);
       for (const widget of layout.widgets) this.addOne(widget, false);
     } finally {
       this.grid.batchUpdate(false);
+      this.grid.column(displayColumns, 'list');
       this.silent = false;
       this.setEditing(this.editing);
     }
@@ -116,14 +187,18 @@ export class GridManager {
         x: node.x || 0,
         y: node.y || 0,
         w: node.w || 1,
-        h: node.h || 1
+        h: node.h || 1,
       };
     });
-    return { version: LAYOUT_VERSION, dashboardId: 'overview', title: 'Общий обзор', widgets };
+    return { version: LAYOUT_VERSION, dashboardId: 'current', title: 'Пространство', widgets };
   }
 
-  getNextRow() { return this.grid.getRow(); }
-  count() { return this.items.size; }
+  getNextRow() {
+    return Math.max(0, ...this.getLayout().widgets.map((widget) => widget.y + widget.h));
+  }
+  count() {
+    return this.items.size;
+  }
 
   dispose() {
     for (const id of Array.from(this.items.keys())) this.charts.disposeOne(id);

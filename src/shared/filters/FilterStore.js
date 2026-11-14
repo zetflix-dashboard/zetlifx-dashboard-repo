@@ -8,8 +8,14 @@ export function validateFilters(filters) {
   if (!validMonth(filters.periodFrom) || !validMonth(filters.periodTo)) {
     throw new Error('Некорректный месяц фильтра');
   }
-  if (filters.periodFrom < MIN_MONTH || filters.periodTo > MAX_MONTH || filters.periodFrom > filters.periodTo) {
-    throw new Error('Период должен находиться в пределах 2024–2025 и начало не может быть позже конца');
+  if (
+    filters.periodFrom < MIN_MONTH ||
+    filters.periodTo > MAX_MONTH ||
+    filters.periodFrom > filters.periodTo
+  ) {
+    throw new Error(
+      'Период должен находиться в пределах 2024–2025 и начало не может быть позже конца',
+    );
   }
   return { periodFrom: filters.periodFrom, periodTo: filters.periodTo };
 }
@@ -24,7 +30,9 @@ export class FilterStore {
     this.value = validateFilters(initial);
     this.listeners = new Set();
   }
-  get() { return { ...this.value }; }
+  get() {
+    return { ...this.value };
+  }
   subscribe(listener) {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
@@ -35,5 +43,7 @@ export class FilterStore {
     this.value = next;
     this.listeners.forEach((listener) => listener(this.get()));
   }
-  reset() { this.set(DEFAULT_FILTERS); }
+  reset() {
+    this.set(DEFAULT_FILTERS);
+  }
 }
