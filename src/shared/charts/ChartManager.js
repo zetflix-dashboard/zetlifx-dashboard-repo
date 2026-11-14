@@ -1,85 +1,70 @@
 import * as echarts from 'echarts/core';
-import { LineChart, BarChart } from 'echarts/charts';
-import { GridComponent, TooltipComponent, LegendComponent, DatasetComponent } from 'echarts/components';
+import { LineChart, BarChart, ScatterChart } from 'echarts/charts';
+import { GridComponent, TooltipComponent, LegendComponent, AriaComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { ChartRegistry } from './ChartRegistry.js';
-
-echarts.use([LineChart, BarChart, GridComponent, TooltipComponent, LegendComponent, DatasetComponent, CanvasRenderer]);
-
+import { datasets } from '../data/datasets.js';
+import { dateRange } from '../filters/FilterStore.js';
+import { validateRows } from './contract.js';
+import { buildOption, renderTable } from './templates.js';
+echarts.use([LineChart, BarChart, ScatterChart, GridComponent, TooltipComponent, LegendComponent, AriaComponent, CanvasRenderer]);
 export class ChartManager {
   constructor(data, filters) {
-    this.data = data;
-    this.filters = filters;
-    this.sessions = new Map();
+    this.data = data; this.filters = filters; this.sessions = new Map();
     this.unsubscribe = filters.subscribe(() => this.refreshAll());
   }
-
-  mount(instanceId, chartId, plotContainer) {
+  mount(instanceId, chartId, container) {
     const definition = ChartRegistry.get(chartId);
-    if (!definition) throw new Error('Неизвестный модуль: ' + chartId);
-    const chartNode = document.createElement('div');
-    chartNode.className = 'widget-chart';
-    const overlay = document.createElement('div');
-    overlay.className = 'widget-overlay';
-    overlay.setAttribute('role', 'status');
-    overlay.textContent = 'Загрузка данных из Parquet…';
-    plotContainer.append(chartNode, overlay);
-    const chart = echarts.init(chartNode, null, { renderer: 'canvas' });
-    const session = { definition, chart, overlay, controller: null, request: 0 };
-    session.observer = new ResizeObserver(() => chart.resize());
-    session.observer.observe(chartNode);
-    this.sessions.set(instanceId, session);
-    this.refreshOne(instanceId);
+    if (!definition) throw new Error('Неизвестный график');
+    const node = document.createElement('div'); node.className = 'widget-chart';
+    const overlay = document.createElement('div'); overlay.className = 'widget-overlay'; overlay.setAttribute('role', 'status');
+    container.append(node, overlay);
+    const session = { definition, node, overlay, chart: null, request: 0, table: definition.template === 'table' };
+    session.observer = new ResizeObserver(() => session.chart?.resize()); session.observer.observe(node);
+    this.sessions.set(instanceId, session); void this.refreshOne(instanceId);
   }
-
-  async refreshOne(instanceId) {
-    const session = this.sessions.get(instanceId);
-    if (!session) return;
-    session.controller?.abort();
-    session.controller = new AbortController();
-    const controller = session.controller;
-    const request = ++session.request;
-    session.overlay.className = 'widget-overlay';
-    session.overlay.textContent = 'Загрузка данных из Parquet…';
-    try {
-      const rows = await session.definition.load({
-        filters: this.filters.get(),
-        query: (files, sql, params) => this.data.query(files, sql, params, controller.signal),
-        signal: controller.signal,
-      });
-      if (this.sessions.get(instanceId) !== session || request !== session.request) return;
-      if (!rows.length) {
-        session.chart.clear();
-        session.overlay.textContent = 'За выбранный период нет данных';
-        return;
-      }
-      session.chart.setOption(session.definition.option(rows), { notMerge: true });
-      session.overlay.className = 'widget-overlay hidden';
-      session.chart.resize();
-    } catch (error) {
-      if (this.sessions.get(instanceId) !== session || request !== session.request || error.name === 'AbortError') return;
-      session.chart.clear();
-      session.overlay.className = 'widget-overlay error';
-      session.overlay.textContent = 'Не удалось загрузить данные: ' + (error?.message || String(error));
+  draw(session) {
+    session.chart?.dispose(); session.chart = null; session.node.replaceChildren();
+    session.node.classList.toggle('table-view', session.table);
+    if (session.table) renderTable(session.node, session.definition, session.rows);
+    else {
+      session.chart = echarts.init(session.node, null, { renderer: 'canvas' });
+      session.chart.setOption(buildOption(session.definition, session.rows, matchMedia('(prefers-reduced-motion: reduce)').matches));
     }
   }
-
-  refreshAll() {
-    for (const id of this.sessions.keys()) this.refreshOne(id);
+  toggleTable(id) {
+    const s = this.sessions.get(id);
+    if (!s || s.definition.template === 'table') return false;
+    s.table = !s.table; if (s.rows?.length) this.draw(s); return s.table;
   }
-  resizeAll() {
-    for (const session of this.sessions.values()) session.chart.resize();
+  async refreshOne(id) {
+    const s = this.sessions.get(id); if (!s) return;
+    s.controller?.abort(); const controller = s.controller = new AbortController(); const request = ++s.request;
+    s.node.setAttribute('aria-busy', 'true'); s.overlay.hidden = false; s.overlay.replaceChildren('Загрузка данных…');
+    // Never leave stale values exposed while the period is changing.
+    s.chart?.clear(); s.node.querySelector('table')?.remove(); s.rows = null;
+    try {
+      const dataset = datasets[s.definition.dataset];
+      const rows = await this.data.query(dataset.sources, dataset.sql, dateRange(this.filters.get()), controller.signal);
+      if (this.sessions.get(id) !== s || request !== s.request) return;
+      s.rows = validateRows(rows, s.definition);
+      if (!rows.length) { s.overlay.textContent = 'За выбранный период нет данных'; return; }
+      this.draw(s); s.overlay.hidden = true;
+    } catch (error) {
+      if (this.sessions.get(id) !== s || request !== s.request || error.name === 'AbortError') return;
+      s.overlay.replaceChildren('Не удалось загрузить данные. ');
+      const retry = document.createElement('button'); retry.textContent = 'Повторить'; retry.type = 'button';
+      retry.addEventListener('click', () => this.refreshOne(id)); s.overlay.append(retry);
+      console.error('Chart ' + s.definition.id, error);
+    } finally {
+      if (this.sessions.get(id) === s && request === s.request) s.node.setAttribute('aria-busy', 'false');
+    }
   }
+  refreshAll() { for (const id of this.sessions.keys()) void this.refreshOne(id); }
+  resizeAll() { for (const s of this.sessions.values()) s.chart?.resize(); }
   disposeOne(id) {
-    const session = this.sessions.get(id);
-    if (!session) return;
-    session.controller?.abort();
-    session.observer.disconnect();
-    session.chart.dispose();
-    this.sessions.delete(id);
+    const s = this.sessions.get(id); if (!s) return;
+    s.controller?.abort(); s.observer.disconnect(); s.chart?.dispose(); this.sessions.delete(id);
   }
-  dispose() {
-    this.unsubscribe();
-    for (const id of Array.from(this.sessions.keys())) this.disposeOne(id);
-  }
+  dispose() { this.unsubscribe(); for (const id of [...this.sessions.keys()]) this.disposeOne(id); }
 }

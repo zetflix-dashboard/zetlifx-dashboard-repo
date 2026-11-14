@@ -1,62 +1,28 @@
 <!doctype html>
 <html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#0b1220">
-  <title>Зетфликс — аналитический дашборд</title>
-</head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="theme-color" content="#f6f7f9"><title>Зетфликс — аналитика</title></head>
 <body>
-<div id="app" class="app">
-  <aside class="sidebar">
-    <div class="brand"><span class="brand-mark">Z</span><div><strong>ЗЕТФЛИКС</strong><small>АНАЛИТИКА</small></div></div>
-    <p class="nav-caption">РАЗДЕЛЫ</p>
-    <nav aria-label="Разделы дашборда">
-      <a class="nav-link active" href="#" aria-current="page"><span>◫</span> Общий обзор</a>
-      <span class="nav-link disabled" title="Раздел появится после разработки графиков"><span>▥</span> Подписчики <small>скоро</small></span>
-      <span class="nav-link disabled"><span>◈</span> Контент <small>скоро</small></span>
-      <span class="nav-link disabled"><span>▧</span> Финансы <small>скоро</small></span>
-    </nav>
-    <div class="sidebar-foot"><span class="live-dot"></span><span>Учебный датасет · 2024–2025</span></div>
-  </aside>
-  <main class="main">
-    <header class="topbar">
-      <div class="breadcrumb">Дашборды <span>/</span> <strong>Общий обзор</strong></div>
-      <div class="top-status"><span id="engine-status-dot" class="status-dot"></span><span id="engine-status" role="status">Движок ожидает запрос</span></div>
-    </header>
-    <div class="page-head">
-      <div><div class="eyebrow">ЗЕТФЛИКС / BUSINESS INTELLIGENCE</div><h1>Общий обзор</h1><p>Коммерческие показатели видеосервиса</p></div>
-      <div class="toolbar">
-        <button class="button button-ghost" id="export-btn" title="Скачать макет в JSON">Экспорт JSON</button>
-        <label class="button button-ghost import-label" title="Загрузить макет из JSON">Импорт JSON<input type="file" id="import-file" accept=".json,application/json" hidden></label>
-        <button class="button button-primary" id="edit-btn" aria-pressed="false">✎ Настроить макет</button>
-      </div>
-    </div>
-    <section class="filters" aria-label="Глобальные фильтры">
-      <div class="filter-heading"><span class="filter-icon">☷</span><strong>Фильтры</strong><span class="filter-help" title="Применяются только к графикам, где метрика допускает такой разрез">ⓘ</span></div>
-      <label class="field"><span>Период с</span><select id="period-from" aria-label="Начало периода"></select></label>
-      <label class="field"><span>Период по</span><select id="period-to" aria-label="Конец периода"></select></label>
-      <label class="field field-disabled" title="Для демо-графиков доступен только фильтр периода"><span>Тариф</span><select disabled><option>Не применим</option></select></label>
-      <label class="field field-disabled" title="Агрегированные контрольные таблицы не содержат регионов"><span>Регион</span><select disabled><option>Не применим</option></select></label>
-      <button class="button button-reset" id="filters-reset">Сбросить</button>
-    </section>
-    <section id="editor-bar" class="editor-bar hidden" aria-label="Инструменты редактирования">
-      <div class="editor-label"><strong>Редактор макета</strong><span id="layout-state">Есть несохранённые изменения</span></div>
-      <div class="editor-actions">
-        <button class="button button-ghost" id="undo-btn" title="Отменить изменение">↶ Отменить</button>
-        <button class="button button-ghost" id="redo-btn" title="Повторить изменение">↷ Повторить</button>
-        <button class="button button-ghost" id="add-btn">＋ График</button>
-        <button class="button button-ghost" id="reset-layout-btn">Сбросить</button>
-        <button class="button button-primary" id="save-btn">Сохранить</button>
-      </div>
-    </section>
-    <div id="catalog" class="catalog hidden" aria-label="Каталог графиков"><div class="catalog-head"><strong>Добавить график</strong><button class="icon-button" id="close-catalog" aria-label="Закрыть каталог">✕</button></div><div id="catalog-items" class="catalog-items"></div></div>
-    <div class="dashboard-title"><div><h2>Финансовые и коммерческие метрики</h2><p>Фактические значения из Parquet. Двигайте и растягивайте графики в режиме настройки.</p></div><span class="dashboard-count" id="widget-count">2 виджета</span></div>
-    <div id="dashboard-grid" class="grid-stack" aria-label="Интерактивная сетка графиков"></div>
-    <div id="empty-layout" class="empty-layout hidden">Макет пуст. Нажмите «Настроить макет» → «График», чтобы добавить визуализацию.</div>
-    <footer class="footer"><span>Данные синтетические · источники: PL_Control, Ad_Inventory, Ad_Revenue</span><span id="message" role="status" aria-live="polite"></span></footer>
-  </main>
-</div>
+<a class="skip-link" href="#workspace-panel">К графикам</a>
+<header class="topbar">
+  <a class="brand" href="./" aria-label="Зетфликс, главная"><span class="brand-mark" aria-hidden="true">Z</span>Зетфликс <span class="brand-caption">Аналитика</span></a>
+  <div class="top-actions"><span id="save-state" role="status"></span><button id="edit-btn" aria-pressed="false">Настроить</button><details class="app-menu"><summary aria-label="Действия с пространствами">Ещё</summary><div class="menu-content">
+    <button id="rename-space">Переименовать</button><button id="export-btn">Экспорт пространств</button><button id="import-btn">Импорт пространств</button><button id="delete-space" class="danger">Удалить пространство</button>
+  </div></details><input type="file" id="import-file" accept="application/json,.json" hidden></div>
+</header>
+<main>
+  <div class="workspace-toolbar">
+    <nav class="space-navigation" aria-label="Пространства"><div id="space-tabs" role="tablist" aria-label="Пространства"></div><button id="create-space" class="add-space" aria-label="Создать пространство" title="Создать пространство">+</button></nav>
+    <div class="period-controls" role="group" aria-label="Период анализа"><label for="period-from">Период</label><select id="period-from" aria-label="Начало периода"></select><span aria-hidden="true">—</span><select id="period-to" aria-label="Конец периода"></select><button id="filters-reset" title="Сбросить период">Сбросить</button></div>
+  </div>
+  <div id="editor-bar" class="editor-bar" hidden><div><button id="add-btn" class="primary">Добавить график</button><button id="undo-btn">Отменить</button><button id="redo-btn">Повторить</button></div><span>Перетаскивайте карточки · стрелки на кнопке «Переместить», Shift — размер</span></div>
+  <p id="message" class="message" role="status" aria-live="polite" hidden></p>
+  <section id="workspace-panel" role="tabpanel" tabindex="0">
+    <div id="dashboard-grid" class="grid-stack"></div>
+    <div id="empty-layout" class="empty-state" hidden><span class="empty-mark" aria-hidden="true">Z</span><h1 id="empty-title">Пространство для ваших данных</h1><p id="empty-description">Добавьте графики из каталога. Макет можно менять в любой момент.</p><button id="empty-action" class="primary">Добавить график</button></div>
+  </section>
+</main>
+<dialog id="catalog"><form method="dialog" class="dialog-heading"><div><h2>Добавить график</h2><p>Выберите визуализацию для этого пространства</p></div><button aria-label="Закрыть каталог">×</button></form><input id="catalog-search" type="search" placeholder="Поиск по названию или C-ID" aria-label="Найти график"><div id="catalog-items"></div><p id="catalog-empty" hidden>Графики не найдены.</p></dialog>
+<dialog id="space-dialog"><form id="space-form"><h2 id="space-dialog-title">Новое пространство</h2><label for="space-name">Название</label><input id="space-name" maxlength="80" required autocomplete="off"><div class="dialog-actions"><button id="cancel-space" type="button">Отмена</button><button class="primary" type="submit">Сохранить</button></div></form></dialog>
+<dialog id="confirm-dialog"><form method="dialog"><h2 id="confirm-title"></h2><p id="confirm-text"></p><div class="dialog-actions"><button value="cancel">Отмена</button><button value="confirm" class="danger">Продолжить</button></div></form></dialog>
 <script type="module" src="/src/main.js"></script>
-</body>
-</html>
+</body></html>

@@ -20,9 +20,11 @@ export class DataClient {
     this.tail = Promise.resolve();
     this.cache = new Map();
     this.cacheLimit = 40;
+    this.closed = false;
   }
 
   async init() {
+    if (this.closed) throw new Error('Data client is closed');
     if (this.conn) return this.conn;
     if (!this.starting) {
       this.onStatus('loading', 'Запуск DuckDB-Wasm…');
@@ -61,10 +63,13 @@ export class DataClient {
   }
 
   query(files, sql, params = [], signal) {
+    if (this.closed) return Promise.reject(new Error('Data client is closed'));
+    if (signal?.aborted) return Promise.reject(new DOMException('Query superseded', 'AbortError'));
     const key = JSON.stringify([files, sql, params, import.meta.env.VITE_DATA_VERSION || 'snapshot-2025']);
     if (this.cache.has(key)) return Promise.resolve(this.cache.get(key));
     const run = async () => {
       if (signal?.aborted) throw new DOMException('Query superseded', 'AbortError');
+      if (this.cache.has(key)) return this.cache.get(key);
       await this.init();
       for (const name of files) await this.ensureFile(name);
       if (signal?.aborted) throw new DOMException('Query superseded', 'AbortError');
@@ -94,6 +99,8 @@ export class DataClient {
   clearCache() { this.cache.clear(); }
 
   async dispose() {
+    this.closed = true;
+    await this.tail;
     if (this.starting) {
       try { await this.starting; } catch { /* failed initialization */ }
     }

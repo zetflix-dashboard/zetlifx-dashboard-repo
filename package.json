@@ -1,7 +1,7 @@
 {
   "name": "zetflix-dashboard",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,7 +9,9 @@
     "build:pages": "vite build --base /zetlifx-dashboard-repo/",
     "preview": "vite preview",
     "test": "node --test tests/*.test.js",
-    "check": "npm run test && npm run build"
+    "check": "npm run validate:charts && npm test && npm run build:pages",
+    "validate:charts": "node scripts/validate-charts.mjs",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "1.32.0",
@@ -17,7 +19,10 @@
     "gridstack": "13.3.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.58.2",
     "vite": "7.3.0"
   },
-  "engines": { "node": ">=20.19.0" }
+  "engines": {
+    "node": ">=20.19.0"
+  }
 }
