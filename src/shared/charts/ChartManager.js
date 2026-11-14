@@ -37,14 +37,15 @@ export class ChartManager {
     if (!session) return;
     session.controller?.abort();
     session.controller = new AbortController();
+    const controller = session.controller;
     const request = ++session.request;
     session.overlay.className = 'widget-overlay';
     session.overlay.textContent = 'Загрузка данных из Parquet…';
     try {
       const rows = await session.definition.load({
         filters: this.filters.get(),
-        query: (files, sql, params) => this.data.query(files, sql, params, session.controller.signal),
-        signal: session.controller.signal,
+        query: (files, sql, params) => this.data.query(files, sql, params, controller.signal),
+        signal: controller.signal,
       });
       if (this.sessions.get(instanceId) !== session || request !== session.request) return;
       if (!rows.length) {
