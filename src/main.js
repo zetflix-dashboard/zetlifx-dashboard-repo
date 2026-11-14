@@ -5,6 +5,7 @@ import { ChartManager } from './shared/charts/ChartManager.js';
 import { DataClient } from './shared/data/DataClient.js';
 import { FilterStore, MIN_MONTH, MAX_MONTH } from './shared/filters/FilterStore.js';
 import { GridManager } from './layout/GridManager.js';
+import { addNewCharts, readSeenCharts, writeSeenCharts } from './layout/AutoCharts.js';
 import { LayoutHistory, validateLayout, readLocalLayout, writeLocalLayout, downloadLayout } from './layout/LayoutStorage.js';
 
 const byId = (id) => document.getElementById(id);
@@ -17,7 +18,13 @@ const data = new DataClient((status, label) => {
   byId('engine-status-dot').className = 'status-dot' + (status === 'ready' ? ' ready' : status === 'error' ? ' error' : '');
 });
 const charts = new ChartManager(data, filters);
-const starting = readLocalLayout(defaults, knownChart);
+const registeredCharts = ChartRegistry.list();
+const factoryIds = defaults.widgets.map(w => w.chartId);
+const storedLayout = readLocalLayout(defaults, knownChart);
+// New modules appear without a commit to overview.json; dismissed cards remain dismissed after Save.
+const seenChartIds = readSeenCharts([...factoryIds, ...storedLayout.widgets.map(w => w.chartId)]);
+const starting = addNewCharts(storedLayout, registeredCharts, seenChartIds);
+const factoryLayout = addNewCharts(defaults, registeredCharts, factoryIds);
 const history = new LayoutHistory(starting);
 let lastSaved = JSON.stringify(starting);
 let editing = false;
@@ -106,6 +113,7 @@ byId('save-btn').addEventListener('click', () => {
   try {
     const layout = validateLayout(grid.getLayout(), knownChart);
     writeLocalLayout(layout, knownChart);
+    writeSeenCharts(registeredCharts.map(chart => chart.id));
     lastSaved = JSON.stringify(layout);
     syncControls();
     message('Макет сохранён в этом браузере');
@@ -114,7 +122,7 @@ byId('save-btn').addEventListener('click', () => {
   }
 });
 byId('reset-layout-btn').addEventListener('click', () => {
-  grid.replace(defaults);
+  grid.replace(factoryLayout);
   history.push(grid.getLayout());
   syncControls();
   message('Стандартный макет восстановлен. Нажмите «Сохранить» для закрепления.');
