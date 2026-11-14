@@ -14,6 +14,7 @@ import {
 import { validateLayout } from './layout/LayoutStorage.js';
 import { datasets } from './shared/data/datasets.js';
 import { initTheme } from './shared/ui/theme.js';
+import { initPeriodPicker } from './shared/ui/PeriodPicker.js';
 const byId = (id) => document.getElementById(id);
 const known = (id) => ChartRegistry.has(id);
 const filters = new FilterStore();
@@ -261,35 +262,7 @@ function filterCatalog(value) {
   byId('catalog-empty').hidden = buttons.some((button) => !button.hidden);
 }
 byId('catalog-search').addEventListener('input', (event) => filterCatalog(event.target.value));
-for (const name of ['period-from', 'period-to'])
-  for (let year = 2024; year <= 2025; year++)
-    for (let month = 1; month <= 12; month++) {
-      const option = document.createElement('option');
-      option.value = year + '-' + String(month).padStart(2, '0');
-      option.textContent = new Intl.DateTimeFormat('ru-RU', {
-        month: 'short',
-        year: 'numeric',
-      }).format(new Date(year, month - 1, 1));
-      byId(name).append(option);
-    }
-function syncPeriod() {
-  byId('period-from').value = filters.get().periodFrom;
-  byId('period-to').value = filters.get().periodTo;
-}
-function applyPeriod() {
-  try {
-    filters.set({ periodFrom: byId('period-from').value, periodTo: byId('period-to').value });
-  } catch (error) {
-    message(error.message);
-    syncPeriod();
-  }
-}
-byId('period-from').addEventListener('change', applyPeriod);
-byId('period-to').addEventListener('change', applyPeriod);
-byId('filters-reset').addEventListener('click', () => {
-  filters.reset();
-  syncPeriod();
-});
+initPeriodPicker(byId('period-picker').parentElement, filters, message);
 byId('export-btn').addEventListener('click', () => {
   const url = URL.createObjectURL(
     new Blob([JSON.stringify(store.current(), null, 2)], { type: 'application/json' }),
