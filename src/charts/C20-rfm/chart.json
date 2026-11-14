@@ -14,5 +14,10 @@
     "users",
     "revenue",
     "share_pct"
+  ],
+  "totals": [
+    "users",
+    "revenue",
+    "share_pct"
   ]
 }
