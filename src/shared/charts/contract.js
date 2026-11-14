@@ -1,4 +1,5 @@
 import { datasets } from '../data/datasets.js';
+import { availableLocalFilters } from '../filters/LocalFilters.js';
 export const TEMPLATES = Object.freeze(['line', 'bar', 'combo', 'scatter', 'pie', 'table']);
 const text = (s, max = 160) => typeof s === 'string' && s.trim().length > 0 && s.length <= max;
 function keys(object, allowed) {
@@ -22,6 +23,7 @@ export function validateChart(raw, catalog = datasets) {
     'columns',
     'columnBars',
     'pointLabel',
+    'localFilters',
   ]);
   if (!/^C\d{2}$/.test(raw.id) || !text(raw.title, 90) || !text(raw.question, 300))
     throw new Error('Нужны C-ID, заголовок и вопрос');
@@ -32,6 +34,11 @@ export function validateChart(raw, catalog = datasets) {
   if (!TEMPLATES.includes(raw.template))
     throw new Error('Шаблон не поддерживается: предложите таблицу или отдельную ADMIN-задачу');
   const fields = catalog[raw.dataset].fields;
+  if (raw.localFilters !== undefined && (!Array.isArray(raw.localFilters) ||
+      new Set(raw.localFilters).size !== raw.localFilters.length ||
+      raw.localFilters.length > 4 ||
+      raw.localFilters.some(id => typeof id !== 'string'))) throw new Error('Некорректные локальные фильтры');
+  availableLocalFilters(raw, catalog);
   const validField = (f) => typeof f === 'string' && Object.hasOwn(fields, f);
   if (raw.template === 'table') {
     if (
