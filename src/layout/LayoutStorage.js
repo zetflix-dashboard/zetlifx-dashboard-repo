@@ -1,6 +1,5 @@
 export const LAYOUT_VERSION = 1;
 export const STORAGE_KEY = 'zetflix.layout.overview.v1';
-import { ChartRegistry } from '../shared/charts/ChartRegistry.js';
 import { validateLocalFilters } from '../shared/filters/LocalFilters.js';
 
 function inRange(value, min, max) {
@@ -52,8 +51,11 @@ export function validateLayout(raw, isKnownChart) {
       type: 'heading', instanceId: item.instanceId, title: item.title.trim(),
       x: item.x, y: item.y, w: item.w, h: item.h,
     };
-    const definition = ChartRegistry.get(item.chartId);
-    const localFilters = definition ? validateLocalFilters(definition, item.localFilters || {}) : {};
+    const definition = isKnownChart(item.chartId);
+    if (item.localFilters !== undefined && (typeof definition !== 'object' || !definition))
+      throw new Error('Нет схемы локального фильтра');
+    const localFilters = typeof definition === 'object' && definition
+      ? validateLocalFilters(definition, item.localFilters || {}) : {};
     return {
       instanceId: item.instanceId,
       chartId: item.chartId,
