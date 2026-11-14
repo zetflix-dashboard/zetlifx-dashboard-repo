@@ -3,6 +3,7 @@ import { ChartRegistry } from '../shared/charts/ChartRegistry.js';
 import { datasets } from '../shared/data/datasets.js';
 import { LAYOUT_VERSION } from './LayoutStorage.js';
 import { createIcon } from '../shared/ui/icons.js';
+import { availableLocalFilters, validateLocalFilters } from '../shared/filters/LocalFilters.js';
 
 function element(tag, className, content) {
   const node = document.createElement(tag);
@@ -12,10 +13,11 @@ function element(tag, className, content) {
 }
 
 export class GridManager {
-  constructor(container, charts, onChange) {
+  constructor(container, charts, onChange, onEditHeading = () => {}) {
     this.container = container;
     this.charts = charts;
     this.onChange = onChange;
+    this.onEditHeading = onEditHeading;
     this.items = new Map();
     this.silent = false;
     this.editing = false;
@@ -63,6 +65,35 @@ export class GridManager {
       layout.widgets.push(widget);
       this.replace(layout);
       this.onChange(this.getLayout());
+      return;
+    }
+    if (widget.type === 'heading') {
+      const item = element('div', 'grid-stack-item heading-item');
+      item.dataset.instanceId = widget.instanceId;
+      const content = element('div', 'grid-stack-item-content heading-content');
+      const label = element('h2', 'heading-title', widget.title);
+      const controls = element('div', 'heading-controls');
+      const grip = element('button', 'widget-grip');
+      grip.type = 'button';
+      grip.setAttribute('aria-label', 'Переместить заголовок: ' + widget.title);
+      grip.append(createIcon('grip'));
+      const edit = element('button', 'heading-edit', 'Изменить');
+      edit.type = 'button';
+      edit.addEventListener('click', () => this.onEditHeading(widget.instanceId, widget.title));
+      const remove = element('button', 'widget-remove', '×');
+      remove.type = 'button';
+      remove.setAttribute('aria-label', 'Удалить заголовок: ' + widget.title);
+      remove.addEventListener('click', () => this.removeOne(widget.instanceId));
+      controls.append(edit, grip, remove);
+      content.append(label, controls);
+      item.append(content);
+      this.container.append(item);
+      this.grid.makeWidget(item, {
+        id: widget.instanceId, x: widget.x, y: widget.y, w: widget.w, h: widget.h,
+        minW: 2, minH: 1, maxH: 3,
+      });
+      this.items.set(widget.instanceId, { item, type: 'heading', title: widget.title });
+      if (notify && !this.silent) this.onChange(this.getLayout());
       return;
     }
     const definition = ChartRegistry.get(widget.chartId);
@@ -141,6 +172,29 @@ export class GridManager {
       table.textContent = active ? 'График' : 'Таблица';
       table.setAttribute('aria-pressed', String(active));
     });
+    const localFilters = validateLocalFilters(definition, widget.localFilters || {});
+    const filtersList = availableLocalFilters(definition);
+    for (const filter of filtersList) {
+      const label = element('label', 'widget-filter');
+      const name = element('span', 'sr-only', filter.label);
+      const select = element('select', 'widget-filter-select');
+      select.setAttribute('aria-label', definition.title + ': ' + filter.label);
+      select.title = filter.label;
+      for (const option of filter.options) {
+        const node = element('option', '', option.label);
+        node.value = option.value;
+        select.append(node);
+      }
+      select.value = localFilters[filter.id] || filter.options[0].value;
+      select.addEventListener('change', () => {
+        const next = validateLocalFilters(definition, { ...this.items.get(widget.instanceId).localFilters, [filter.id]: select.value });
+        this.items.get(widget.instanceId).localFilters = next;
+        this.charts.setLocalFilters(widget.instanceId, next);
+        this.onChange(this.getLayout());
+      });
+      label.append(name, select);
+      actions.append(label);
+    }
     actions.append(table, grip, remove);
     head.append(titles, actions);
     const plot = element('div', 'widget-plot');
@@ -157,15 +211,15 @@ export class GridManager {
       minW: definition.minSize.w,
       minH: definition.minSize.h,
     });
-    this.items.set(widget.instanceId, { item, chartId: widget.chartId });
-    this.charts.mount(widget.instanceId, widget.chartId, plot);
+    this.items.set(widget.instanceId, { item, chartId: widget.chartId, localFilters });
+    this.charts.mount(widget.instanceId, widget.chartId, plot, localFilters);
     if (notify && !this.silent) this.onChange(this.getLayout());
   }
 
   removeOne(instanceId, notify = true) {
     const current = this.items.get(instanceId);
     if (!current) return;
-    this.charts.disposeOne(instanceId);
+    if (current.type !== 'heading') this.charts.disposeOne(instanceId);
     this.grid.removeWidget(current.item);
     this.items.delete(instanceId);
     if (notify && !this.silent) this.onChange(this.getLayout());
@@ -198,7 +252,10 @@ export class GridManager {
       const item = this.items.get(node.id);
       return {
         instanceId: node.id,
-        chartId: item.chartId,
+        ...(item.type === 'heading' ? { type: 'heading', title: item.title } : {
+          chartId: item.chartId,
+          ...(Object.keys(item.localFilters).length ? { localFilters: item.localFilters } : {}),
+        }),
         x: node.x || 0,
         y: node.y || 0,
         w: node.w || 1,
@@ -208,6 +265,14 @@ export class GridManager {
     return { version: LAYOUT_VERSION, dashboardId: 'current', title: 'Пространство', widgets };
   }
 
+  updateHeading(instanceId, title) {
+    const item = this.items.get(instanceId);
+    if (!item || item.type !== 'heading') throw new Error('Заголовок не найден');
+    item.title = title;
+    item.item.querySelector('.heading-title').textContent = title;
+    item.item.querySelector('.widget-grip').setAttribute('aria-label', 'Переместить заголовок: ' + title);
+    this.onChange(this.getLayout());
+  }
   getNextRow() {
     return Math.max(0, ...this.getLayout().widgets.map((widget) => widget.y + widget.h));
   }
@@ -216,7 +281,7 @@ export class GridManager {
   }
 
   dispose() {
-    for (const id of Array.from(this.items.keys())) this.charts.disposeOne(id);
+    for (const [id, item] of this.items) if (item.type !== 'heading') this.charts.disposeOne(id);
     this.items.clear();
     this.grid.destroy();
   }
