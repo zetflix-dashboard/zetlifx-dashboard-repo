@@ -1,5 +1,7 @@
 export const LAYOUT_VERSION = 1;
 export const STORAGE_KEY = 'zetflix.layout.overview.v1';
+import { ChartRegistry } from '../shared/charts/ChartRegistry.js';
+import { validateLocalFilters } from '../shared/filters/LocalFilters.js';
 
 function inRange(value, min, max) {
   return Number.isInteger(value) && value >= min && value <= max;
@@ -27,8 +29,16 @@ export function validateLayout(raw, isKnownChart) {
     }
     if (ids.has(item.instanceId)) throw new Error('Повторяющийся ID экземпляра');
     ids.add(item.instanceId);
-    if (typeof item.chartId !== 'string' || !isKnownChart(item.chartId))
+    const heading = item.type === 'heading';
+    if (heading) {
+      if (typeof item.title !== 'string' || !item.title.trim() || item.title.length > 100 ||
+          item.chartId !== undefined || item.localFilters !== undefined)
+        throw new Error('Некорректный блок заголовка');
+    } else if (item.type !== undefined && item.type !== 'chart') {
+      throw new Error('Неизвестный тип блока');
+    } else if (typeof item.chartId !== 'string' || !isKnownChart(item.chartId)) {
       throw new Error('Неизвестный график: ' + item.chartId);
+    }
     if (
       !inRange(item.x, 0, 11) ||
       !inRange(item.y, 0, 1000) ||
@@ -38,9 +48,16 @@ export function validateLayout(raw, isKnownChart) {
     ) {
       throw new Error('Недопустимые координаты или размеры для ' + item.instanceId);
     }
+    if (heading) return {
+      type: 'heading', instanceId: item.instanceId, title: item.title.trim(),
+      x: item.x, y: item.y, w: item.w, h: item.h,
+    };
+    const definition = ChartRegistry.get(item.chartId);
+    const localFilters = definition ? validateLocalFilters(definition, item.localFilters || {}) : {};
     return {
       instanceId: item.instanceId,
       chartId: item.chartId,
+      ...(Object.keys(localFilters).length ? { localFilters } : {}),
       x: item.x,
       y: item.y,
       w: item.w,
