@@ -10,7 +10,5 @@
       "field": "hours"
     }
   ],
-  "localFilters": [
-    "access"
-  ]
+  "localFilters": ["access"]
 }

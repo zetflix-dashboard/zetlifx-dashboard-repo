@@ -284,7 +284,16 @@ test('floating editor supports semantic headings, persistence and undo', async (
   await page.locator('#heading-text').fill('Важные показатели');
   await page.locator('#heading-form button[type="submit"]').click();
   await expect(page.locator('.heading-title')).toHaveText('Важные показатели');
-  await expect.poll(() => page.evaluate(key => JSON.parse(localStorage.getItem(key)).spaces[0].widgets.find(w => w.type === 'heading')?.title, key)).toBe('Важные показатели');
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (key) =>
+          JSON.parse(localStorage.getItem(key)).spaces[0].widgets.find((w) => w.type === 'heading')
+            ?.title,
+        key,
+      ),
+    )
+    .toBe('Важные показатели');
   await page.locator('.heading-edit').click();
   await page.locator('#heading-text').fill('Экономика подписок');
   await page.locator('#heading-form button[type="submit"]').click();
@@ -324,12 +333,21 @@ test('local filters are isolated by widget and saved with the workspace', async 
   await page.locator('#add-btn').click();
   await page.locator('.catalog-option[data-chart-id="C14"]').click();
   const cards = page.locator('.grid-stack-item').filter({ hasText: 'Стоимость часа по тайтлам' });
-  await expect(cards.locator('canvas')).toHaveCount(1, {timeout:120000});
+  await expect(cards.locator('canvas')).toHaveCount(1, { timeout: 120000 });
   const selector = cards.locator('.widget-filter-select');
   await expect(selector).toHaveCount(1);
   await selector.selectOption('Драма');
-  await expect.poll(() => page.evaluate(key => JSON.parse(localStorage.getItem(key)).spaces[0].widgets.find(w => w.chartId === 'C14')?.localFilters?.genre, key)).toBe('Драма');
-  await expect(cards.locator('.widget-overlay:visible')).toHaveCount(0, {timeout:120000});
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (key) =>
+          JSON.parse(localStorage.getItem(key)).spaces[0].widgets.find((w) => w.chartId === 'C14')
+            ?.localFilters?.genre,
+        key,
+      ),
+    )
+    .toBe('Драма');
+  await expect(cards.locator('.widget-overlay:visible')).toHaveCount(0, { timeout: 120000 });
   await page.locator('#edit-btn').click();
   await expect(selector).toHaveValue('Драма');
   await expect(page.locator('.widget-chart canvas')).toHaveCount(3);
@@ -345,9 +363,9 @@ test('RFM table is compact, includes only three metric bars and a totals row', a
   await page.locator('.catalog-option[data-chart-id="C20"]').click();
   const card = page.locator('.grid-stack-item').filter({ hasText: 'RFM-сегменты пользователей' });
   const table = card.locator('.data-table');
-  await expect(table.locator('tbody tr')).toHaveCount(21,{timeout:120000});
+  await expect(table.locator('tbody tr')).toHaveCount(21, { timeout: 120000 });
   await expect(table.locator('thead th')).toHaveCount(4);
-  await expect(table.locator('.cell-bar').first()).toHaveAttribute('data-bar-index','0');
+  await expect(table.locator('.cell-bar').first()).toHaveAttribute('data-bar-index', '0');
   await expect(table.locator('tfoot tr')).toHaveCount(1);
   await expect(table.locator('tfoot tr')).toContainText('100%');
   await expect(table.locator('thead th').first()).toHaveCSS('position', 'sticky');

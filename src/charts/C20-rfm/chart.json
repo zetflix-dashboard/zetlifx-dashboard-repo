@@ -4,20 +4,7 @@
   "question": "Как распределены прямые платящие пользователи по RFM и их доле успешных платежей?",
   "dataset": "rfmSnapshot",
   "template": "table",
-  "columns": [
-    "segment",
-    "users",
-    "revenue",
-    "share_pct"
-  ],
-  "columnBars": [
-    "users",
-    "revenue",
-    "share_pct"
-  ],
-  "totals": [
-    "users",
-    "revenue",
-    "share_pct"
-  ]
+  "columns": ["segment", "users", "revenue", "share_pct"],
+  "columnBars": ["users", "revenue", "share_pct"],
+  "totals": ["users", "revenue", "share_pct"]
 }

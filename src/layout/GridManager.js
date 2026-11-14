@@ -79,7 +79,9 @@ export class GridManager {
       grip.append(createIcon('grip'));
       const edit = element('button', 'heading-edit', 'Изменить');
       edit.type = 'button';
-      edit.addEventListener('click', () => this.onEditHeading(widget.instanceId, this.items.get(widget.instanceId).title));
+      edit.addEventListener('click', () =>
+        this.onEditHeading(widget.instanceId, this.items.get(widget.instanceId).title),
+      );
       const remove = element('button', 'widget-remove', '×');
       remove.type = 'button';
       remove.setAttribute('aria-label', 'Удалить заголовок: ' + widget.title);
@@ -89,8 +91,14 @@ export class GridManager {
       item.append(content);
       this.container.append(item);
       this.grid.makeWidget(item, {
-        id: widget.instanceId, x: widget.x, y: widget.y, w: widget.w, h: widget.h,
-        minW: 2, minH: 1, maxH: 3,
+        id: widget.instanceId,
+        x: widget.x,
+        y: widget.y,
+        w: widget.w,
+        h: widget.h,
+        minW: 2,
+        minH: 1,
+        maxH: 3,
       });
       this.items.set(widget.instanceId, { item, type: 'heading', title: widget.title });
       if (notify && !this.silent) this.onChange(this.getLayout());
@@ -187,7 +195,10 @@ export class GridManager {
       }
       select.value = localFilters[filter.id] || filter.options[0].value;
       select.addEventListener('change', () => {
-        const next = validateLocalFilters(definition, { ...this.items.get(widget.instanceId).localFilters, [filter.id]: select.value });
+        const next = validateLocalFilters(definition, {
+          ...this.items.get(widget.instanceId).localFilters,
+          [filter.id]: select.value,
+        });
         this.items.get(widget.instanceId).localFilters = next;
         this.charts.setLocalFilters(widget.instanceId, next);
         this.onChange(this.getLayout());
@@ -252,10 +263,12 @@ export class GridManager {
       const item = this.items.get(node.id);
       return {
         instanceId: node.id,
-        ...(item.type === 'heading' ? { type: 'heading', title: item.title } : {
-          chartId: item.chartId,
-          ...(Object.keys(item.localFilters).length ? { localFilters: item.localFilters } : {}),
-        }),
+        ...(item.type === 'heading'
+          ? { type: 'heading', title: item.title }
+          : {
+              chartId: item.chartId,
+              ...(Object.keys(item.localFilters).length ? { localFilters: item.localFilters } : {}),
+            }),
         x: node.x || 0,
         y: node.y || 0,
         w: node.w || 1,
@@ -270,7 +283,9 @@ export class GridManager {
     if (!item || item.type !== 'heading') throw new Error('Заголовок не найден');
     item.title = title;
     item.item.querySelector('.heading-title').textContent = title;
-    item.item.querySelector('.widget-grip').setAttribute('aria-label', 'Переместить заголовок: ' + title);
+    item.item
+      .querySelector('.widget-grip')
+      .setAttribute('aria-label', 'Переместить заголовок: ' + title);
     this.onChange(this.getLayout());
   }
   getNextRow() {

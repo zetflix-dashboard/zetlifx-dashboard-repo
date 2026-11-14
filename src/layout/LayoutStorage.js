@@ -30,8 +30,13 @@ export function validateLayout(raw, isKnownChart) {
     ids.add(item.instanceId);
     const heading = item.type === 'heading';
     if (heading) {
-      if (typeof item.title !== 'string' || !item.title.trim() || item.title.length > 100 ||
-          item.chartId !== undefined || item.localFilters !== undefined)
+      if (
+        typeof item.title !== 'string' ||
+        !item.title.trim() ||
+        item.title.length > 100 ||
+        item.chartId !== undefined ||
+        item.localFilters !== undefined
+      )
         throw new Error('Некорректный блок заголовка');
     } else if (item.type !== undefined && item.type !== 'chart') {
       throw new Error('Неизвестный тип блока');
@@ -47,15 +52,23 @@ export function validateLayout(raw, isKnownChart) {
     ) {
       throw new Error('Недопустимые координаты или размеры для ' + item.instanceId);
     }
-    if (heading) return {
-      type: 'heading', instanceId: item.instanceId, title: item.title.trim(),
-      x: item.x, y: item.y, w: item.w, h: item.h,
-    };
+    if (heading)
+      return {
+        type: 'heading',
+        instanceId: item.instanceId,
+        title: item.title.trim(),
+        x: item.x,
+        y: item.y,
+        w: item.w,
+        h: item.h,
+      };
     const definition = isKnownChart(item.chartId);
     if (item.localFilters !== undefined && (typeof definition !== 'object' || !definition))
       throw new Error('Нет схемы локального фильтра');
-    const localFilters = typeof definition === 'object' && definition
-      ? validateLocalFilters(definition, item.localFilters || {}) : {};
+    const localFilters =
+      typeof definition === 'object' && definition
+        ? validateLocalFilters(definition, item.localFilters || {})
+        : {};
     return {
       instanceId: item.instanceId,
       chartId: item.chartId,

@@ -1,8 +1,14 @@
 const NS = 'http://www.w3.org/2000/svg';
 
 const ICONS = {
-  undo: [['path', { d: 'M9 14 4 9l5-5' }], ['path', { d: 'M4 9h10a6 6 0 0 1 0 12h-2' }]],
-  redo: [['path', { d: 'm15 14 5-5-5-5' }], ['path', { d: 'M20 9H10a6 6 0 0 0 0 12h2' }]],
+  undo: [
+    ['path', { d: 'M9 14 4 9l5-5' }],
+    ['path', { d: 'M4 9h10a6 6 0 0 1 0 12h-2' }],
+  ],
+  redo: [
+    ['path', { d: 'm15 14 5-5-5-5' }],
+    ['path', { d: 'M20 9H10a6 6 0 0 0 0 12h2' }],
+  ],
   info: [
     ['circle', { cx: 12, cy: 12, r: 9 }],
     ['path', { d: 'M12 10v6m0-9h.01' }],

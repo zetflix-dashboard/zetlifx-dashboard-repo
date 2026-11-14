@@ -35,10 +35,14 @@ export function validateChart(raw, catalog = datasets) {
   if (!TEMPLATES.includes(raw.template))
     throw new Error('Шаблон не поддерживается: предложите таблицу или отдельную ADMIN-задачу');
   const fields = catalog[raw.dataset].fields;
-  if (raw.localFilters !== undefined && (!Array.isArray(raw.localFilters) ||
+  if (
+    raw.localFilters !== undefined &&
+    (!Array.isArray(raw.localFilters) ||
       new Set(raw.localFilters).size !== raw.localFilters.length ||
       raw.localFilters.length > 4 ||
-      raw.localFilters.some(id => typeof id !== 'string'))) throw new Error('Некорректные локальные фильтры');
+      raw.localFilters.some((id) => typeof id !== 'string'))
+  )
+    throw new Error('Некорректные локальные фильтры');
   availableLocalFilters(raw, catalog);
   const validField = (f) => typeof f === 'string' && Object.hasOwn(fields, f);
   if (raw.template === 'table') {
@@ -46,11 +50,13 @@ export function validateChart(raw, catalog = datasets) {
       raw.dimension !== undefined ||
       raw.series !== undefined ||
       !Array.isArray(raw.columns) ||
-      (raw.totals !== undefined && (
-        !Array.isArray(raw.totals) || new Set(raw.totals).size !== raw.totals.length ||
-        raw.totals.some(field => !raw.columns.includes(field) ||
-          ['month', 'text'].includes(fields[field].unit))
-      )) ||
+      (raw.totals !== undefined &&
+        (!Array.isArray(raw.totals) ||
+          new Set(raw.totals).size !== raw.totals.length ||
+          raw.totals.some(
+            (field) =>
+              !raw.columns.includes(field) || ['month', 'text'].includes(fields[field].unit),
+          ))) ||
       !raw.columns.length ||
       raw.columns.length > 12 ||
       raw.columns.some((f) => !validField(f)) ||

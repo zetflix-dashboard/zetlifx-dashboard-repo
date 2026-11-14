@@ -11,7 +11,5 @@
     }
   ],
   "pointLabel": "title",
-  "localFilters": [
-    "genre"
-  ]
+  "localFilters": ["genre"]
 }

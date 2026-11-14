@@ -39,16 +39,21 @@ let headingEditingId = null;
 let confirmAction;
 let saveTimer;
 let saved = false;
-const grid = new GridManager(byId('dashboard-grid'), charts, (layout) => {
-  try {
-    store.changeActive({ widgets: layout.widgets });
-    persist();
-    syncControls();
-  } catch (error) {
-    message(error.message);
-    render();
-  }
-}, (id, title) => openHeading(id, title));
+const grid = new GridManager(
+  byId('dashboard-grid'),
+  charts,
+  (layout) => {
+    try {
+      store.changeActive({ widgets: layout.widgets });
+      persist();
+      syncControls();
+    } catch (error) {
+      message(error.message);
+      render();
+    }
+  },
+  (id, title) => openHeading(id, title),
+);
 function message(text) {
   byId('message').textContent = text;
   byId('message').hidden = !text;
@@ -153,7 +158,10 @@ function setEditing(value) {
   byId('edit-btn').setAttribute('aria-pressed', String(editing));
 }
 byId('edit-btn').addEventListener('click', () => setEditing(!editing));
-for (const [id, name] of [['undo-btn', 'undo'], ['redo-btn', 'redo']]) {
+for (const [id, name] of [
+  ['undo-btn', 'undo'],
+  ['redo-btn', 'redo'],
+]) {
   byId(id).append(createIcon(name));
 }
 function openHeading(id = null, title = '') {
@@ -313,12 +321,17 @@ function updateCatalogStatus() {
   for (const button of byId('catalog-items').children) {
     const count = activeCounts.get(button.dataset.chartId) || 0;
     const elsewhere = store.state.spaces.some(
-      (space) => space.id !== store.state.activeId &&
+      (space) =>
+        space.id !== store.state.activeId &&
         space.widgets.some((widget) => widget.chartId === button.dataset.chartId),
     );
     button.classList.toggle('is-added', count > 0);
     const status = button.querySelector('.catalog-status');
-    status.textContent = count ? 'На дашборде · ' + count : elsewhere ? 'В другом пространстве' : 'Не добавлен';
+    status.textContent = count
+      ? 'На дашборде · ' + count
+      : elsewhere
+        ? 'В другом пространстве'
+        : 'Не добавлен';
   }
 }
 function filterCatalog(value) {
