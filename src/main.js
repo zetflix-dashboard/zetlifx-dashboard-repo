@@ -15,6 +15,7 @@ import { validateLayout } from './layout/LayoutStorage.js';
 import { datasets } from './shared/data/datasets.js';
 import { initTheme } from './shared/ui/theme.js';
 import { initPeriodPicker } from './shared/ui/PeriodPicker.js';
+import { createIcon } from './shared/ui/icons.js';
 const byId = (id) => document.getElementById(id);
 const known = (id) => ChartRegistry.has(id);
 const filters = new FilterStore();
@@ -34,6 +35,7 @@ const store = new WorkspaceStore(loaded.state, known);
 let recovery = Boolean(loaded.recovery);
 let editing = false;
 let naming = 'create';
+let headingEditingId = null;
 let confirmAction;
 let saveTimer;
 let saved = false;
@@ -46,7 +48,7 @@ const grid = new GridManager(byId('dashboard-grid'), charts, (layout) => {
     message(error.message);
     render();
   }
-});
+}, (id, title) => openHeading(id, title));
 function message(text) {
   byId('message').textContent = text;
   byId('message').hidden = !text;
@@ -88,6 +90,7 @@ function syncControls() {
     : 'Разделяйте аналитику по задачам, темам или командам.';
   byId('empty-action').textContent = active ? 'Добавить график' : 'Создать пространство';
   byId('add-btn').disabled = !active;
+  byId('add-heading-btn').disabled = !active;
   byId('rename-space').disabled = !active;
   byId('delete-space').disabled = !active;
 }
@@ -150,6 +153,47 @@ function setEditing(value) {
   byId('edit-btn').setAttribute('aria-pressed', String(editing));
 }
 byId('edit-btn').addEventListener('click', () => setEditing(!editing));
+for (const [id, name] of [['undo-btn', 'undo'], ['redo-btn', 'redo']]) {
+  byId(id).append(createIcon(name));
+}
+function openHeading(id = null, title = '') {
+  headingEditingId = id;
+  byId('heading-dialog-title').textContent = id ? 'Изменить заголовок' : 'Добавить заголовок';
+  byId('heading-text').value = title;
+  byId('heading-dialog').showModal();
+  byId('heading-text').focus();
+}
+byId('add-heading-btn').addEventListener('click', () => openHeading());
+byId('cancel-heading').addEventListener('click', () => byId('heading-dialog').close());
+byId('heading-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const title = byId('heading-text').value.trim();
+  if (!title || title.length > 100) {
+    byId('heading-text').setCustomValidity('Заголовок: от 1 до 100 символов');
+    byId('heading-text').reportValidity();
+    return;
+  }
+  try {
+    if (headingEditingId) grid.updateHeading(headingEditingId, title);
+    else {
+      if (grid.count() >= 100) throw new Error('В пространстве допускается до 100 блоков');
+      grid.addOne({
+        type: 'heading',
+        title,
+        instanceId: crypto.randomUUID(),
+        x: 0,
+        y: grid.getNextRow(),
+        w: 12,
+        h: 1,
+      });
+    }
+    byId('heading-dialog').close();
+  } catch (error) {
+    message(error.message);
+  }
+});
+byId('heading-text').addEventListener('input', (event) => event.target.setCustomValidity(''));
+
 function openName(mode) {
   naming = mode;
   byId('space-dialog-title').textContent =
@@ -220,6 +264,7 @@ document.addEventListener('keydown', (event) => {
 });
 function openCatalog() {
   byId('catalog-search').value = '';
+  updateCatalogStatus();
   filterCatalog('');
   byId('catalog').showModal();
   byId('catalog-search').focus();
@@ -236,7 +281,10 @@ for (const chart of ChartRegistry.list()) {
   title.textContent = chart.title;
   const label = document.createElement('span');
   label.textContent = chart.id + ' · ' + datasets[chart.dataset].label;
-  button.append(title, label);
+  const status = document.createElement('span');
+  status.className = 'catalog-status';
+  button.dataset.chartId = chart.id;
+  button.append(title, label, status);
   button.dataset.search = (chart.id + ' ' + chart.title).toLocaleLowerCase('ru-RU');
   button.addEventListener('click', () => {
     if (grid.count() >= 100) {
@@ -254,6 +302,24 @@ for (const chart of ChartRegistry.list()) {
     byId('catalog').close();
   });
   byId('catalog-items').append(button);
+}
+function updateCatalogStatus() {
+  const current = store.active()?.widgets || [];
+  const activeCounts = new Map();
+  for (const widget of current) {
+    if (!widget.chartId) continue;
+    activeCounts.set(widget.chartId, (activeCounts.get(widget.chartId) || 0) + 1);
+  }
+  for (const button of byId('catalog-items').children) {
+    const count = activeCounts.get(button.dataset.chartId) || 0;
+    const elsewhere = store.state.spaces.some(
+      (space) => space.id !== store.state.activeId &&
+        space.widgets.some((widget) => widget.chartId === button.dataset.chartId),
+    );
+    button.classList.toggle('is-added', count > 0);
+    const status = button.querySelector('.catalog-status');
+    status.textContent = count ? 'На дашборде · ' + count : elsewhere ? 'В другом пространстве' : 'Не добавлен';
+  }
 }
 function filterCatalog(value) {
   const query = value.trim().toLocaleLowerCase('ru-RU');
