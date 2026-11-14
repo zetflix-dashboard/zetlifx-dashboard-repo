@@ -27,7 +27,9 @@ try {
 } catch {
   /* blocked storage remains explicit in UI */
 }
-const loaded = loadWorkspace(createWorkspace(ChartRegistry.list()), known, storage);
+// Keep the existing starter layout lightweight; newly added charts enter via the catalogue.
+const starter = ChartRegistry.list().filter((chart) => ['C03', 'C18'].includes(chart.id));
+const loaded = loadWorkspace(createWorkspace(starter), known, storage);
 const store = new WorkspaceStore(loaded.state, known);
 let recovery = Boolean(loaded.recovery);
 let editing = false;
