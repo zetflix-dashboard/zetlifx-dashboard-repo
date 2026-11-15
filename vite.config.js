@@ -28,7 +28,7 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: [
       {
-        find: /^@published-workspace(?=\?|$)/,
+        find: /^@initial-workspace(?=\?|$)/,
         replacement: resolve(
           mode === 'test' ? 'tests/fixtures/workspace.json' : 'src/layout/workspace.json',
         ),

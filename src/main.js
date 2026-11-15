@@ -5,16 +5,19 @@ import { DataClient } from './shared/data/DataClient.js';
 import { FilterStore } from './shared/filters/FilterStore.js';
 import { GridManager } from './layout/GridManager.js';
 import { WorkspaceStore, validateWorkspace } from './layout/WorkspaceStore.js';
-import sharedWorkspace from '@published-workspace?raw';
+import sharedWorkspace from '@initial-workspace?raw';
 import {
   ACTIVE_KEY,
-  DRAFT_KEY,
-  loadDraft,
+  CACHE_KEY,
+  PENDING_KEY,
+  TOKEN_KEY,
+  WorkspaceConflict,
+  recoverLegacyWorkspace,
   sameLayout,
-  validatePublishedWorkspace,
-  workspaceBlobSha,
-} from './layout/PublishedWorkspace.js';
-import { initWorkspacePublishing } from './layout/WorkspacePublishingUI.js';
+  serializeWorkspace,
+  validateSharedWorkspace,
+} from './layout/SharedWorkspace.js';
+import { WorkspaceSync, repository } from './layout/WorkspaceSync.js';
 import { validateLocalFilters } from './shared/filters/LocalFilters.js';
 import { validateLayout } from './layout/LayoutStorage.js';
 import { datasets } from './shared/data/datasets.js';
@@ -53,22 +56,69 @@ try {
 } catch {
   // A blocked storage area only affects personal preferences.
 }
-const published = validatePublishedWorkspace(JSON.parse(sharedWorkspace), known, selected);
-const publishedSha = await workspaceBlobSha(sharedWorkspace);
-const loaded = loadDraft(published, publishedSha, known, storage);
-let draftStore = loaded.state ? new WorkspaceStore(loaded.state, known) : null;
-let draftBase = loaded.base || publishedSha;
-let submittedSha = loaded.submittedSha;
-let recovery = Boolean(loaded.recovery);
-const commonStore = new WorkspaceStore(published, known);
-let store = draftStore ?? commonStore;
-let showCommon = false;
+const initial = validateSharedWorkspace(JSON.parse(sharedWorkspace), known, selected);
+const sync = new WorkspaceSync(known);
+let confirmed = readStored(CACHE_KEY) ?? initial;
+let pending = readPending();
+let store = new WorkspaceStore(pending?.state ?? confirmed, known);
+let editBase;
 let editing = false;
+let writing = false;
+let reading = false;
+let needsAccess = false;
+let conflicted = false;
+let retryAt = 0;
 let naming = 'create';
 let headingEditingId = null;
 let confirmAction;
-let saveTimer;
-let saved = false;
+let session;
+try {
+  session = window.sessionStorage;
+} catch {
+  // An in-memory token is enough for this page.
+}
+let token = readToken();
+
+function readToken() {
+  try {
+    return session?.getItem(TOKEN_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+function setToken(value) {
+  token = value;
+  try {
+    if (value) session?.setItem(TOKEN_KEY, value);
+    else session?.removeItem(TOKEN_KEY);
+  } catch {
+    // Keep using the token in memory.
+  }
+}
+
+function readStored(key) {
+  try {
+    const raw = JSON.parse(storage?.getItem(key) || 'null');
+    return raw && validateSharedWorkspace(raw, known, selected);
+  } catch {
+    return null;
+  }
+}
+
+function readPending() {
+  try {
+    const raw = JSON.parse(storage?.getItem(PENDING_KEY) || 'null');
+    if (!raw || typeof raw.id !== 'string') return null;
+    return {
+      id: raw.id,
+      base: validateSharedWorkspace(raw.base, known),
+      state: validateSharedWorkspace(raw.state, known, selected),
+    };
+  } catch {
+    return null;
+  }
+}
 const grid = new GridManager(
   byId('dashboard-grid'),
   charts,
@@ -86,7 +136,6 @@ const grid = new GridManager(
     }
     try {
       store.changeActive({ widgets: layout.widgets });
-      persist();
       syncControls();
     } catch (error) {
       message(error.message);
@@ -99,38 +148,9 @@ function message(text) {
   byId('message').textContent = text;
   byId('message').hidden = !text;
 }
-function persist() {
-  clearTimeout(saveTimer);
-  saved = false;
-  byId('save-state').textContent = 'Сохранение…';
-  saveTimer = setTimeout(flush, 250);
-}
-function flush() {
-  clearTimeout(saveTimer);
-  try {
-    if (recovery) {
-      const original = storage.getItem(DRAFT_KEY);
-      if (original) storage.setItem(DRAFT_KEY + '.recovery.' + Date.now(), original);
-      recovery = false;
-    }
-    if (!draftStore) return;
-    storage.setItem(
-      DRAFT_KEY,
-      JSON.stringify({ state: draftStore.current(), base: draftBase, submittedSha }),
-    );
-    saved = true;
-    byId('save-state').textContent = showCommon ? 'Общий макет' : 'Локальный макет';
-  } catch {
-    byId('save-state').textContent = 'Не сохранено';
-    message(
-      'Сохранение в браузере недоступно. Экспортируйте пространства через меню действий, чтобы не потерять изменения.',
-    );
-  }
-}
 function syncControls() {
-  byId('publish-workspace').disabled =
-    !editing || (draftBase === publishedSha && sameLayout(store.state, published));
-  byId('reset-draft').hidden = !editing || draftBase === publishedSha;
+  for (const id of ['edit-btn', 'create-space', 'empty-action', 'import-btn'])
+    byId(id).disabled = Boolean(pending);
   byId('undo-btn').disabled = !store.past.length;
   byId('redo-btn').disabled = !store.future.length;
   const active = store.active();
@@ -144,8 +164,8 @@ function syncControls() {
   byId('empty-action').textContent = active ? 'Добавить график' : 'Создать пространство';
   byId('add-btn').disabled = !active;
   byId('add-heading-btn').disabled = !active;
-  byId('rename-space').disabled = !active;
-  byId('delete-space').disabled = !active;
+  byId('rename-space').disabled = !active || Boolean(pending);
+  byId('delete-space').disabled = !active || Boolean(pending);
 }
 function renderTabs() {
   const tabs = byId('space-tabs');
@@ -162,15 +182,7 @@ function renderTabs() {
     button.tabIndex = space.id === store.state.activeId ? 0 : -1;
     button.addEventListener('click', () => {
       store.select(space.id);
-      if (store === draftStore) persist();
-      else {
-        selected = space.id;
-        try {
-          storage?.setItem(ACTIVE_KEY, selected);
-        } catch {
-          // The selection still works in this tab.
-        }
-      }
+      rememberSelection(space.id);
       render();
       byId(button.id)?.focus();
     });
@@ -216,72 +228,189 @@ function render() {
   grid.replace({ version: 1, dashboardId: 'current', widgets });
   syncControls();
 }
-function setEditing(value) {
-  if (editing === value) return;
-  if (value) {
-    draftStore ??= new WorkspaceStore(store.current(), known);
-    showCommon = false;
-    store = draftStore;
-  } else {
-    if (!saved) flush();
-    if (!saved) return;
+function rememberSelection(id) {
+  selected = id;
+  try {
+    if (id) storage?.setItem(ACTIVE_KEY, id);
+    else storage?.removeItem(ACTIVE_KEY);
+  } catch {
+    // The selection still works in this tab.
   }
+}
+
+function showWorkspace(state) {
+  store = new WorkspaceStore(validateSharedWorkspace(state, known, selected), known);
+  render();
+}
+
+function confirmWorkspace(state) {
+  confirmed = state;
+  try {
+    storage?.setItem(CACHE_KEY, JSON.stringify(state));
+  } catch {
+    // The confirmed version is still available in this tab.
+  }
+}
+
+function setEditing(value) {
+  if (editing === value || (value && pending)) return;
+  if (value) editBase = store.current();
   editing = value;
   grid.setEditing(editing);
   byId('editor-bar').hidden = !editing;
   byId('edit-btn').hidden = editing;
-  byId('save-draft').hidden = !editing;
-  byId('publish-workspace').hidden = !editing;
+  byId('save-workspace').hidden = !editing;
   reloadCharts.hidden = editing;
   reloadCharts.disabled = editing;
-  byId('workspace-view').disabled = editing;
-  byId('workspace-view').checked = showCommon;
-  if (editing) {
-    if (draftBase !== publishedSha)
-      message(
-        'Черновик сделан на старом макете. Экспортируйте его или откройте новый общий макет.',
-      );
-    render();
-    byId('save-draft').focus();
-  } else {
-    render();
-    byId('edit-btn').focus();
-  }
-  byId('save-state').textContent = 'Локальный макет';
-}
-byId('edit-btn').addEventListener('click', () => setEditing(true));
-byId('save-draft').addEventListener('click', () => setEditing(false));
-byId('workspace-view').addEventListener('change', (event) => {
-  showCommon = event.target.checked;
-  store = showCommon ? commonStore : (draftStore ?? commonStore);
-  byId('save-state').textContent = showCommon ? 'Общий макет' : 'Локальный макет';
   render();
+  byId(editing ? 'save-workspace' : 'edit-btn').focus();
+}
+
+function syncStatus(text = '', action = '') {
+  byId('sync-notice').hidden = !text;
+  byId('sync-status').textContent = text;
+  byId('resolve-sync').hidden = !action;
+  byId('resolve-sync').textContent = action;
+}
+
+function requestAccess() {
+  const dialog = byId('sync-access');
+  if (!dialog.open) dialog.showModal();
+}
+
+async function refreshWorkspace() {
+  if (reading || writing || pending || document.hidden) return;
+  reading = true;
+  try {
+    let latest;
+    try {
+      latest = await sync.read(token);
+    } catch (error) {
+      if (token && [401, 403, 404].includes(error.status) && !error.limited) {
+        setToken('');
+        latest = await sync.read();
+      } else throw error;
+    }
+    if (pending || writing || sameLayout(latest.state, confirmed)) return;
+    confirmWorkspace(latest.state);
+    if (!editing) showWorkspace(confirmed);
+  } catch {
+    // Keep the last confirmed view and try again at the next refresh.
+  } finally {
+    reading = false;
+    if (pending) void sendPending();
+  }
+}
+
+function clearPending() {
+  try {
+    if (readPending()?.id === pending.id) storage?.removeItem(PENDING_KEY);
+  } catch {
+    // A replay first checks for the same changes on GitHub.
+  }
+  pending = null;
+  conflicted = false;
+  needsAccess = false;
+  retryAt = 0;
+}
+
+async function sendPending() {
+  if (!pending || writing || reading || conflicted || Date.now() < retryAt) return;
+  if (!token || needsAccess) {
+    syncStatus('Изменения готовы к отправке', 'Подключить GitHub');
+    return;
+  }
+  writing = true;
+  syncStatus('Синхронизация…');
+  try {
+    const state = await sync.save(pending, token);
+    confirmWorkspace(state);
+    clearPending();
+    showWorkspace(state);
+    syncStatus();
+  } catch (error) {
+    if (error instanceof WorkspaceConflict) {
+      conflicted = true;
+      syncStatus(error.message, 'Открыть актуальный макет');
+    } else if ([401, 403, 404].includes(error.status) && !error.limited) {
+      setToken('');
+      needsAccess = true;
+      syncStatus('Для сохранения нужен доступ к GitHub', 'Подключить GitHub');
+      requestAccess();
+    } else {
+      retryAt = Math.max(Date.now() + 10000, error.retryAt || 0);
+      syncStatus('Сохраним, когда связь с GitHub восстановится');
+    }
+  } finally {
+    writing = false;
+    if (!pending) byId('edit-btn').focus();
+  }
+}
+
+function saveWorkspace() {
+  const state = store.current();
+  rememberSelection(state.activeId);
+  if (sameLayout(editBase, state)) {
+    setEditing(false);
+    showWorkspace(confirmed);
+    return;
+  }
+  try {
+    serializeWorkspace(state);
+  } catch (error) {
+    message(error.message);
+    return;
+  }
+  if (readPending()) {
+    message('В другой вкладке есть неотправленные правки. Завершите сохранение в ней.');
+    return;
+  }
+  pending = { id: crypto.randomUUID(), base: editBase, state };
+  try {
+    storage?.setItem(PENDING_KEY, JSON.stringify(pending));
+  } catch {
+    // Still try to save to GitHub while this tab is open.
+  }
+  setEditing(false);
+  if (!token) requestAccess();
+  void sendPending();
+}
+
+byId('edit-btn').addEventListener('click', () => setEditing(true));
+byId('save-workspace').addEventListener('click', saveWorkspace);
+byId('sync-access-repo').textContent = repository;
+byId('sync-access-cancel').addEventListener('click', () => byId('sync-access').close());
+byId('sync-access-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const input = byId('github-token');
+  const value = input.value.trim();
+  if (!value) return;
+  setToken(value);
+  needsAccess = false;
+  input.value = '';
+  byId('sync-access').close();
+  void sendPending();
 });
-byId('reset-draft').addEventListener('click', () =>
-  confirm(
-    'Открыть новый общий макет?',
-    'Текущий черновик будет скачан как JSON. Перенесите нужные изменения в новый макет вручную.',
-    () => {
-      exportWorkspace();
-      draftBase = publishedSha;
-      submittedSha = undefined;
-      draftStore = new WorkspaceStore(published, known);
-      store = draftStore;
-      persist();
-      message('');
-      render();
-    },
-  ),
-);
-initWorkspacePublishing({
-  storage,
-  publishedSha,
-  draft: () => ({ state: draftStore.current(), base: draftBase }),
-  markSubmitted: (blob) => {
-    submittedSha = blob;
-    flush();
-  },
+byId('resolve-sync').addEventListener('click', async () => {
+  if (!conflicted) {
+    requestAccess();
+    return;
+  }
+  try {
+    const latest = await sync.read(token);
+    exportWorkspace(pending.state);
+    clearPending();
+    confirmWorkspace(latest.state);
+    showWorkspace(confirmed);
+    syncStatus();
+  } catch {
+    message('Не удалось загрузить актуальный макет. Повторите попытку.');
+  }
 });
+const legacy = recoverLegacyWorkspace(initial, known, storage);
+byId('recover-workspace').hidden = !legacy;
+byId('recover-workspace').addEventListener('click', () => exportWorkspace(legacy));
+
 for (const [id, name] of [
   ['undo-btn', 'undo'],
   ['redo-btn', 'redo'],
@@ -327,6 +456,7 @@ byId('heading-form').addEventListener('submit', (event) => {
 byId('heading-text').addEventListener('input', (event) => event.target.setCustomValidity(''));
 
 function openName(mode) {
+  if (pending) return;
   if (!editing) setEditing(true);
   if (mode === 'rename' && !store.active()) return;
   naming = mode;
@@ -346,7 +476,6 @@ byId('space-form').addEventListener('submit', (event) => {
     if (naming === 'create') store.create(name, crypto.randomUUID());
     else store.changeActive({ title: name });
     byId('space-dialog').close();
-    persist();
     render();
     byId('tab-' + store.state.activeId)?.focus();
   } catch (error) {
@@ -367,6 +496,7 @@ byId('confirm-dialog').addEventListener('close', () => {
   confirmAction = null;
 });
 byId('delete-space').addEventListener('click', () => {
+  if (pending) return;
   if (!editing) setEditing(true);
   if (!store.active()) return;
   confirm(
@@ -374,14 +504,12 @@ byId('delete-space').addEventListener('click', () => {
     'Графики останутся в каталоге. Удаление пространства можно отменить в настройке макета.',
     () => {
       store.removeActive();
-      persist();
       render();
     },
   );
 });
 function history(direction) {
   store[direction]();
-  persist();
   render();
 }
 byId('undo-btn').addEventListener('click', () => history('undo'));
@@ -474,9 +602,9 @@ function filterCatalog(value) {
 }
 byId('catalog-search').addEventListener('input', (event) => filterCatalog(event.target.value));
 initPeriodPicker(byId('period-picker').parentElement, filters, message);
-function exportWorkspace() {
+function exportWorkspace(state = store.current()) {
   const url = URL.createObjectURL(
-    new Blob([JSON.stringify(store.current(), null, 2)], { type: 'application/json' }),
+    new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }),
   );
   const link = document.createElement('a');
   link.href = url;
@@ -484,7 +612,7 @@ function exportWorkspace() {
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-byId('export-btn').addEventListener('click', exportWorkspace);
+byId('export-btn').addEventListener('click', () => exportWorkspace());
 byId('import-btn').addEventListener('click', () => byId('import-file').click());
 byId('import-file').addEventListener('change', async (event) => {
   const file = event.target.files[0];
@@ -500,16 +628,16 @@ byId('import-file').addEventListener('change', async (event) => {
         spaces: [{ id: 'imported', title: old.title, widgets: old.widgets }],
       };
     }
-    const state = Object.hasOwn(incoming, 'previousBlobSha')
-      ? validatePublishedWorkspace(incoming, known)
-      : validateWorkspace(incoming, known);
+    const state = Object.hasOwn(incoming, 'activeId')
+      ? validateWorkspace(incoming, known)
+      : validateSharedWorkspace(incoming, known);
     confirm(
       'Импортировать пространства?',
       'Текущие пространства будут заменены. Это действие можно отменить в настройке макета.',
       () => {
+        if (pending) return;
         setEditing(true);
         store.commit(state);
-        persist();
         render();
       },
     );
@@ -519,29 +647,32 @@ byId('import-file').addEventListener('change', async (event) => {
     event.target.value = '';
   }
 });
-window.addEventListener('storage', (event) => {
-  if (event.key === DRAFT_KEY)
-    message(
-      'Пространства изменены в другой вкладке. Экспортируйте текущую версию перед перезагрузкой, если хотите её сохранить.',
-    );
+function syncNow() {
+  if (pending) void sendPending();
+  else void refreshWorkspace();
+}
+
+window.addEventListener('online', () => {
+  if (retryAt < Date.now() + 10000) retryAt = 0;
+  syncNow();
 });
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) syncNow();
+});
+const syncInterval = setInterval(syncNow, 10000);
 window.addEventListener('beforeunload', (event) => {
-  if (!saved && draftStore) {
-    flush();
-    if (!saved) {
-      event.preventDefault();
-      event.returnValue = '';
-    }
+  if ((editing && !sameLayout(editBase, store.state)) || (pending && !readPending())) {
+    event.preventDefault();
+    event.returnValue = '';
   }
 });
 window.addEventListener('pagehide', (event) => {
   if (!event.persisted) {
-    if (!saved && draftStore) flush();
+    clearInterval(syncInterval);
     charts.dispose();
     grid.dispose();
     void data.dispose();
   }
 });
 render();
-byId('save-state').textContent = 'Локальный макет';
-if (loaded.warning) message(loaded.warning);
+syncNow();

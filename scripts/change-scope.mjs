@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
-import { validateWorkspaceChange } from './workspace-change.mjs';
 const FILE = /^src\/charts\/(C\d{2})-[a-z0-9][a-z0-9-]*\/(chart\.json|README\.md)$/;
 export function normalizeMode(raw) {
   if (typeof raw !== 'string') return null;
@@ -42,7 +41,7 @@ export function parseScope(body = '') {
     throw new Error('chart allows one C-ID; admin must leave charts empty');
   return { mode, charts, explicit: true };
 }
-export function checkScope(paths, scope, branch = '') {
+export function checkScope(paths, scope) {
   const files = [...new Set(paths)];
   if (!files.length) throw new Error('No changed files');
   if (
@@ -56,12 +55,6 @@ export function checkScope(paths, scope, branch = '') {
     )
   )
     throw new Error('Invalid path');
-  if (branch.startsWith('admin/layout-')) {
-    if (scope.mode !== 'admin' || !scope.explicit)
-      throw new Error('Workspace publication requires explicit admin scope');
-    if (files.length !== 1 || files[0] !== 'src/layout/workspace.json')
-      throw new Error('Workspace publication may only change src/layout/workspace.json');
-  }
   if (scope.mode === 'admin' && scope.explicit)
     return { mode: 'admin', charts: [], changed: files.length };
   if (scope.mode !== 'chart') throw new Error('Explicit admin mode required');
@@ -116,8 +109,7 @@ export function runCli() {
   )
     .split('\0')
     .filter(Boolean);
-  const result = checkScope(paths, parseScope(pull.body), pull.head.ref);
-  validateWorkspaceChange(GITHUB_BASE_SHA, GITHUB_HEAD_SHA);
+  const result = checkScope(paths, parseScope(pull.body));
   const tree = execFileSync('git', ['ls-tree', '-r', '-z', GITHUB_HEAD_SHA, '--', 'src/charts'], {
     encoding: 'utf8',
   });

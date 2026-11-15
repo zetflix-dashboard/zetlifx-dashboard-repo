@@ -2,9 +2,9 @@ import { readdirSync, readFileSync, lstatSync } from 'node:fs';
 import { validateChart } from '../src/shared/charts/contract.js';
 import {
   WORKSPACE_PATH,
-  validatePublishedWorkspace,
+  validateSharedWorkspace,
   MAX_WORKSPACE_BYTES,
-} from '../src/layout/PublishedWorkspace.js';
+} from '../src/layout/SharedWorkspace.js';
 
 const charts = new Map();
 for (const entry of readdirSync('src/charts', { withFileTypes: true })) {
@@ -16,8 +16,8 @@ for (const entry of readdirSync('src/charts', { withFileTypes: true })) {
 }
 const stat = lstatSync(WORKSPACE_PATH);
 if (!stat.isFile() || stat.mode & 0o111 || stat.size > MAX_WORKSPACE_BYTES)
-  throw new Error('The published layout must be a regular JSON file under 1 MB');
+  throw new Error('The initial layout must be a regular JSON file under 1 MB');
 const raw = JSON.parse(readFileSync(WORKSPACE_PATH, 'utf8'));
-validatePublishedWorkspace(raw, (id) => charts.get(id));
+validateSharedWorkspace(raw, (id) => charts.get(id));
 
-console.log('Validated published workspace');
+console.log('Validated initial workspace');
