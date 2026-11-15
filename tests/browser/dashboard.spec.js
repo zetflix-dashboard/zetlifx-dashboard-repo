@@ -611,6 +611,8 @@ test('publication resumes a created PR after a network error and never stores th
   await page.locator('#heading-text').fill('Общий заголовок');
   await page.locator('#heading-form button[type="submit"]').click();
   await page.locator('#publish-workspace').click();
+  await expect(page.locator('#publish-summary')).toContainText('1 пространств');
+  await expect(page.locator('#publish-summary')).toContainText('1 добавлено');
   await expect(page.locator('#github-login')).toHaveAttribute('placeholder', '@username');
   await page.locator('#github-login').fill('@editor');
   await page.locator('#github-token').fill('github_pat_test_token');
@@ -619,7 +621,10 @@ test('publication resumes a created PR after a network error and never stores th
   await expect(page.locator('#publication-link')).toHaveAttribute('href', /\/pull\/42$/);
   await page.locator('#confirm-publish').click();
   await expect(page.locator('#publish-dialog')).toBeHidden();
-  await expect(page.locator('#publication-status')).toContainText('Автослияние запрошено');
+  await expect(page.locator('#publication-progress')).toContainText('Проверяем изменения');
+  await page.locator('#publication-progress').click();
+  await expect(page.locator('#publication-details')).toBeVisible();
+  await expect(page.locator('#publication-steps li')).toHaveCount(4);
   expect(updates).toHaveLength(1);
   expect(updates[0].body.sha).toBe(base);
   expect(updates[0].json).toMatchObject({
