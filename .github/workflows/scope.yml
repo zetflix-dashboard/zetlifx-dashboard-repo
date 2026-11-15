@@ -3,26 +3,43 @@ on:
   pull_request_target:
     types: [opened, reopened, synchronize, edited, ready_for_review]
     branches: [main]
+  merge_group:
+    types: [checks_requested]
+    branches: [main]
 permissions:
   contents: read
+  pull-requests: read
 jobs:
   scope:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.base.sha }}
+          ref: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - name: Fetch PR object without executing it
+        if: github.event_name == 'pull_request_target'
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: git fetch origin "refs/pull/$PR_NUMBER/head"
+      - name: Fetch queue candidate and identify its pull request
+        if: github.event_name == 'merge_group'
+        env:
+          QUEUE_REF: ${{ github.event.merge_group.head_ref }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$QUEUE_REF" =~ ^(refs/heads/)?gh-readonly-queue/main/pr-([0-9]+)(-|$) ]]
+          pr_number="${BASH_REMATCH[2]}"
+          git fetch origin "${QUEUE_REF#refs/heads/}"
+          gh api "repos/$GITHUB_REPOSITORY/pulls/$pr_number" > "$RUNNER_TEMP/queued-pr.json"
       - name: Validate scope with trusted base-branch code
         env:
-          GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          QUEUED_PULL_REQUEST_PATH: ${{ runner.temp }}/queued-pr.json
         run: node scripts/change-scope.mjs

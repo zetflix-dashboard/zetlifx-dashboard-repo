@@ -9,6 +9,7 @@ const ICONS = {
     ['path', { d: 'm15 14 5-5-5-5' }],
     ['path', { d: 'M20 9H10a6 6 0 0 0 0 12h2' }],
   ],
+  refresh: [['path', { d: 'M20 11a8 8 0 1 0-2.1 6.4M20 5v6h-6' }]],
   info: [
     ['circle', { cx: 12, cy: 12, r: 9 }],
     ['path', { d: 'M12 10v6m0-9h.01' }],

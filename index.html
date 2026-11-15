@@ -37,6 +37,12 @@
           type="button"
           aria-label="Переключить тему"
         ></button
+        ><button
+          id="reload-charts"
+          type="button"
+          aria-label="Перезагрузить все графики"
+          title="Перезагрузить все графики"
+        ></button
         ><button id="edit-btn" aria-pressed="false">Настроить</button>
         <details class="app-menu">
           <summary
@@ -128,8 +134,14 @@
           aria-label="Повторить"
           title="Повторить"
         ></button>
+        <button id="publish-workspace" type="button">Опубликовать для всех</button>
+        <button id="reset-draft" type="button" hidden>Открыть общий макет</button>
       </div>
       <p id="message" class="message" role="status" aria-live="polite" hidden></p>
+      <div class="publication-info">
+        <span id="publication-status" role="status"></span>
+        <a id="publication-link" target="_blank" rel="noopener noreferrer" hidden>Открыть PR</a>
+      </div>
       <section id="workspace-panel" role="tabpanel" tabindex="0">
         <div id="dashboard-grid" class="grid-stack"></div>
         <div id="empty-layout" class="empty-state" hidden>
@@ -142,6 +154,30 @@
         </div>
       </section>
     </main>
+    <dialog id="publish-dialog" aria-labelledby="publish-title">
+      <form id="publish-form" method="post">
+        <h2 id="publish-title">Опубликовать для всех</h2>
+        <p>
+          GitHub опубликует макет после проверок. Сохрани токен в менеджере паролей браузера для
+          следующих публикаций.
+        </p>
+        <label for="github-login">Логин GitHub</label>
+        <input id="github-login" name="username" autocomplete="username" required />
+        <label for="github-token">Fine-grained токен GitHub</label>
+        <input
+          id="github-token"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          required
+        />
+        <p id="publish-error" role="alert"></p>
+        <div class="dialog-actions">
+          <button id="cancel-publish" type="button">Отмена</button>
+          <button id="confirm-publish" class="primary" type="submit">Опубликовать</button>
+        </div>
+      </form>
+    </dialog>
     <dialog id="heading-dialog">
       <form id="heading-form">
         <h2 id="heading-dialog-title">Заголовок</h2>

@@ -30,7 +30,7 @@ jobs:
       - name: Install
         run: npm ci --no-audit --no-fund
       - name: Check source
-        run: npm run validate:charts && npm test
+        run: npm run validate:charts && npm run validate:workspace && npm test
       - name: Build for GitHub Pages
         run: npm run build:pages
       - name: Configure Pages

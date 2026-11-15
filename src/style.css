@@ -419,6 +419,8 @@ main {
   gap: 8px;
   width: max-content;
   max-width: calc(100vw - 24px);
+  flex-wrap: wrap;
+  justify-content: center;
   padding: 9px;
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -1051,4 +1053,40 @@ dialog label {
     transition: none !important;
     scroll-behavior: auto !important;
   }
+}
+
+.publication-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.publication-info:has(#publication-status:empty) {
+  display: none;
+}
+
+#publish-form input {
+  min-width: 0;
+  width: 100%;
+}
+
+#publish-error:empty {
+  display: none;
+}
+
+#reload-charts,
+.widget-actions .widget-refresh {
+  display: inline-grid;
+  place-items: center;
+}
+.widget-actions .widget-refresh {
+  min-width: 28px;
+  padding: 3px;
+}
+.widget-refresh svg {
+  width: 15px;
+  height: 15px;
+}
+.edit-mode .widget-actions .widget-refresh {
+  display: none;
 }

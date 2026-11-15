@@ -201,12 +201,18 @@ export class GridManager {
         });
         this.items.get(widget.instanceId).localFilters = next;
         this.charts.setLocalFilters(widget.instanceId, next);
-        this.onChange(this.getLayout());
+        this.onChange(this.getLayout(), { instanceId: widget.instanceId, localFilters: next });
       });
       label.append(name, select);
       actions.append(label);
     }
-    actions.append(table, grip, remove);
+    const refresh = element('button', 'widget-refresh');
+    refresh.type = 'button';
+    refresh.title = 'Перезагрузить график';
+    refresh.setAttribute('aria-label', 'Перезагрузить график: ' + definition.title);
+    refresh.append(createIcon('refresh'));
+    refresh.addEventListener('click', () => this.charts.refreshOne(widget.instanceId, true));
+    actions.append(table, refresh, grip, remove);
     head.append(titles, actions);
     const plot = element('div', 'widget-plot');
     content.append(head, plot);
