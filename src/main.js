@@ -34,7 +34,7 @@ reloadCharts.addEventListener('click', async () => {
   try {
     await charts.reloadAll();
   } finally {
-    reloadCharts.disabled = false;
+    reloadCharts.disabled = editing;
   }
 });
 let storage;
