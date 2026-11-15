@@ -34,13 +34,13 @@
           id="workspace-view"
           type="checkbox"
           role="switch"
-          aria-label="Показать общий макет"
+          aria-label="Показать общий макет команды"
         />
-        <span class="workspace-option workspace-local">Локальный</span>
-        <span class="workspace-option workspace-common">Общий</span>
+        <span class="workspace-option workspace-local">Мой макет</span>
+        <span class="workspace-option workspace-common">Общий макет</span>
       </label>
       <div class="top-actions">
-        <span id="save-state" class="sr-only" role="status"></span
+        <span id="save-state" class="save-indicator" role="status" aria-live="polite" title="Личные изменения сохраняются только в этом браузере"></span
         ><button
           id="theme-toggle"
           class="theme-toggle"
@@ -54,10 +54,21 @@
           title="Перезагрузить все графики"
         ></button
         ><button id="edit-btn" type="button">Настроить</button>
-        <button id="save-draft" type="button" hidden>Сохранить черновик</button>
+        <button id="save-draft" type="button" hidden>Сохранить для себя</button>
         <button id="publish-workspace" class="primary" type="button" hidden>
-          Опубликовать для всех
+          Опубликовать для команды
         </button>
+        <details id="publication-progress" class="publication-progress" hidden>
+          <summary id="progress-summary">Статус публикации</summary>
+          <div class="publication-progress-panel">
+            <strong id="progress-title">Публикация</strong>
+            <p id="progress-description"></p>
+            <div class="publication-progress-actions">
+              <button id="check-publication" type="button">Проверить статус</button>
+              <a id="progress-link" target="_blank" rel="noopener noreferrer" hidden>Технические детали</a>
+            </div>
+          </div>
+        </details>
         <details class="app-menu">
           <summary
             class="menu-trigger"
@@ -148,12 +159,12 @@
           aria-label="Повторить"
           title="Повторить"
         ></button>
-        <button id="reset-draft" type="button" hidden>Открыть общий макет</button>
+        <button id="reset-draft" type="button" hidden>Начать с нового общего макета</button>
       </div>
       <p id="message" class="message" role="status" aria-live="polite" hidden></p>
       <aside id="publication-toast" class="publication-toast" hidden>
         <span id="publication-status" role="status"></span>
-        <a id="publication-link" target="_blank" rel="noopener noreferrer" hidden>Открыть PR</a>
+        <a id="publication-link" target="_blank" rel="noopener noreferrer" hidden>Технические детали</a>
         <button id="dismiss-publication" type="button" aria-label="Закрыть уведомление">×</button>
       </aside>
       <section id="workspace-panel" role="tabpanel" tabindex="0">
@@ -170,13 +181,14 @@
     </main>
     <dialog id="publish-dialog" aria-labelledby="publish-title">
       <form id="publish-form" method="post">
-        <h2 id="publish-title">Опубликовать для всех</h2>
+        <h2 id="publish-title">Опубликовать для команды</h2>
         <p>
-          GitHub опубликует макет после проверок. Сохрани токен в менеджере паролей браузера для
-          следующих публикаций.
+          После отправки мы проверим изменения и обновим общий дашборд. Вы сможете следить за статусом здесь, даже если закроете окно публикации.
         </p>
+        <section id="publish-preview" class="publish-preview" aria-label="Что изменится"></section>
+        <p class="publish-privacy">Ваши личные изменения хранятся только в этом браузере. Публикация изменит макет для всей команды.</p>
         <details class="token-help">
-          <summary>Как получить токен</summary>
+          <summary>Первая публикация: как подключить GitHub</summary>
           <ol>
             <li>
               <a
@@ -221,7 +233,7 @@
         <p id="publish-error" role="alert"></p>
         <div class="dialog-actions">
           <button id="cancel-publish" type="button">Отмена</button>
-          <button id="confirm-publish" class="primary" type="submit">Опубликовать</button>
+          <button id="confirm-publish" class="primary" type="submit">Отправить изменения</button>
         </div>
       </form>
     </dialog>
