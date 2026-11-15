@@ -1453,11 +1453,19 @@ dialog {
   line-height: 1.5;
 }
 @media (max-width: 850px) {
-  .save-indicator {
-    display: none;
+  #save-state.save-indicator {
+    display: inline-flex;
+    flex-basis: 100%;
+    order: 10;
+    max-width: none;
+    justify-content: flex-end;
+    margin-right: 0;
   }
 }
 @media (max-width: 600px) {
+  #save-state.save-indicator {
+    justify-content: center;
+  }
   .publication-progress-panel {
     right: 50%;
     transform: translateX(50%);
