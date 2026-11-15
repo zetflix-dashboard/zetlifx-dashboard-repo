@@ -34,13 +34,13 @@
           id="workspace-view"
           type="checkbox"
           role="switch"
-          aria-label="Показать общий макет"
+          aria-label="Показать общий макет команды"
         />
-        <span class="workspace-option workspace-local">Локальный</span>
-        <span class="workspace-option workspace-common">Общий</span>
+        <span class="workspace-option workspace-local">Мой макет</span>
+        <span class="workspace-option workspace-common">Общий макет</span>
       </label>
       <div class="top-actions">
-        <span id="save-state" class="sr-only" role="status"></span
+        <span id="save-state" role="status" aria-live="polite" title="Личный макет хранится только в этом браузере"></span
         ><button
           id="theme-toggle"
           class="theme-toggle"
@@ -53,10 +53,11 @@
           aria-label="Перезагрузить все графики"
           title="Перезагрузить все графики"
         ></button
-        ><button id="edit-btn" type="button">Настроить</button>
-        <button id="save-draft" type="button" hidden>Сохранить черновик</button>
+        ><button id="publication-progress" type="button" hidden aria-controls="publication-details" aria-expanded="false">Статус публикации</button>
+        <button id="edit-btn" type="button">Настроить</button>
+        <button id="save-draft" type="button" hidden>Сохранить для себя</button>
         <button id="publish-workspace" class="primary" type="button" hidden>
-          Опубликовать для всех
+          Опубликовать для команды
         </button>
         <details class="app-menu">
           <summary
@@ -153,9 +154,21 @@
       <p id="message" class="message" role="status" aria-live="polite" hidden></p>
       <aside id="publication-toast" class="publication-toast" hidden>
         <span id="publication-status" role="status"></span>
-        <a id="publication-link" target="_blank" rel="noopener noreferrer" hidden>Открыть PR</a>
+        <a id="publication-link" target="_blank" rel="noopener noreferrer" hidden>Технические детали</a>
         <button id="dismiss-publication" type="button" aria-label="Закрыть уведомление">×</button>
       </aside>
+      <section id="publication-details" class="publication-details" hidden aria-label="Состояние публикации">
+        <strong id="publication-details-title">Публикация изменений</strong>
+        <ol id="publication-steps">
+          <li>Отправка изменений</li>
+          <li>Проверки и согласование</li>
+          <li>Обновление сайта</li>
+          <li>Доступно команде</li>
+        </ol>
+        <p id="publication-explanation">Здесь можно отслеживать публикацию даже после закрытия уведомления.</p>
+        <button id="publication-recheck" type="button">Проверить статус</button>
+        <a id="publication-details-link" target="_blank" rel="noopener noreferrer" hidden>Технические детали</a>
+      </section>
       <section id="workspace-panel" role="tabpanel" tabindex="0">
         <div id="dashboard-grid" class="grid-stack"></div>
         <div id="empty-layout" class="empty-state" hidden>
@@ -170,10 +183,14 @@
     </main>
     <dialog id="publish-dialog" aria-labelledby="publish-title">
       <form id="publish-form" method="post">
+        <div id="publish-preview">
+          <h3>Что изменится для команды</h3>
+          <p id="publish-summary" aria-live="polite"></p>
+          <p>Публикация может занять некоторое время. Ваши изменения сохранятся в браузере.</p>
+        </div>
         <h2 id="publish-title">Опубликовать для всех</h2>
         <p>
-          GitHub опубликует макет после проверок. Сохрани токен в менеджере паролей браузера для
-          следующих публикаций.
+          Для публикации нужен доступ к командному репозиторию. Данные для входа можно сохранить в менеджере паролей браузера.
         </p>
         <details class="token-help">
           <summary>Как получить токен</summary>
@@ -221,9 +238,20 @@
         <p id="publish-error" role="alert"></p>
         <div class="dialog-actions">
           <button id="cancel-publish" type="button">Отмена</button>
-          <button id="confirm-publish" class="primary" type="submit">Опубликовать</button>
+          <button id="confirm-publish" class="primary" type="submit">Отправить изменения</button>
         </div>
       </form>
+    </dialog>
+    <dialog id="recovery-dialog" aria-labelledby="recovery-title">
+      <h2 id="recovery-title">Общий макет изменился</h2>
+      <p>Ваш черновик сохранён. Выберите пространства, которые хотите перенести в актуальную версию. При совпадении названий выбранное пространство заменит общую версию.</p>
+      <div id="recovery-spaces"></div>
+      <p id="recovery-error" role="alert"></p>
+      <div class="dialog-actions">
+        <button id="recovery-download" type="button">Скачать мой макет</button>
+        <button id="recovery-cancel" type="button">Отмена</button>
+        <button id="recovery-apply" class="primary" type="button">Перенести выбранное</button>
+      </div>
     </dialog>
     <dialog id="heading-dialog">
       <form id="heading-form">
