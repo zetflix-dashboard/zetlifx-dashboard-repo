@@ -3,7 +3,7 @@ import { serializeWorkspace, workspaceBlobSha } from './PublishedWorkspace.js';
 
 const ATTEMPT_KEY = 'zetflix.layout-publication.v1';
 
-export function initWorkspacePublishing({ storage, publishedSha, draft, markSubmitted }) {
+export function initWorkspacePublishing({ storage, publishedSha, draft, preview, markSubmitted }) {
   const byId = (id) => document.getElementById(id);
   const dialog = byId('publish-dialog');
   const form = byId('publish-form');
@@ -19,6 +19,50 @@ export function initWorkspacePublishing({ storage, publishedSha, draft, markSubm
   });
   const link = byId('publication-link');
   const submit = byId('confirm-publish');
+  const progress = byId('publication-progress');
+  const progressTitle = byId('progress-title');
+  const progressDescription = byId('progress-description');
+  const progressLink = byId('progress-link');
+  function stage(kind, number) {
+    const descriptions = {
+      submitted: ['Изменения отправлены', 'Проверяем макет перед обновлением общего дашборда.'],
+      checking: ['Проверяем изменения', 'GitHub выполняет обязательные проверки.'],
+      merged: ['Обновляем общий дашборд', 'Изменения приняты. Новая версия сайта ещё может быть недоступна.'],
+      available: ['Изменения доступны команде', 'Сайт содержит отправленный макет.'],
+      conflict: ['Общий макет обновился', 'Ваш черновик сохранён. Скачайте копию и перенесите нужные изменения на новую версию.'],
+      failed: ['Публикация не завершилась', 'Проверьте подробности и повторите отправку после исправления ошибки.'],
+      unknown: ['Статус пока неизвестен', 'Не удалось связаться с GitHub. Изменения в браузере сохранены.'],
+    };
+    const [title, description] = descriptions[kind];
+    progress.hidden = false;
+    progressTitle.textContent = title;
+    progressDescription.textContent = description;
+    byId('progress-summary').textContent = title;
+    progressLink.hidden = !Number.isSafeInteger(number) || number < 1;
+    if (!progressLink.hidden) progressLink.href = 'https://github.com/' + REPOSITORY + '/pull/' + number;
+  }
+  function renderPreview() {
+    const counts = preview();
+    const labels = { spaces: 'Изменено пространств', added: 'Добавлено блоков', removed: 'Удалено блоков', moved: 'Перемещено блоков', resized: 'Изменено размеров', filters: 'Изменено фильтров', headings: 'Изменено заголовков' };
+    const container = byId('publish-preview');
+    container.replaceChildren();
+    const title = document.createElement('strong');
+    title.textContent = 'Что изменится для команды';
+    container.append(title);
+    const list = document.createElement('ul');
+    for (const [key, label] of Object.entries(labels)) {
+      if (!counts[key]) continue;
+      const item = document.createElement('li');
+      item.textContent = label + ': ' + counts[key];
+      list.append(item);
+    }
+    if (!list.children.length) {
+      const item = document.createElement('li');
+      item.textContent = 'Изменений относительно загруженного общего макета нет';
+      list.append(item);
+    }
+    container.append(list);
+  }
   let busy = false;
   let attempt;
   try {
@@ -53,11 +97,11 @@ export function initWorkspacePublishing({ storage, publishedSha, draft, markSubm
     if (busy || refreshing || !attempt?.number) return;
     const current = attempt;
     if (current.blob === publishedSha) {
-      show('Макет доступен на Pages', current.number);
+      stage('available', current.number);
       return;
     }
     if (current.merged) {
-      show('В main · обновите страницу после деплоя Pages', current.number);
+      stage('merged', current.number);
       return;
     }
     refreshing = true;
@@ -66,24 +110,26 @@ export function initWorkspacePublishing({ storage, publishedSha, draft, markSubm
       if (busy || attempt !== current) return;
       if (pr.merged_at) {
         remember({ ...current, merged: true });
-        show('В main · обновите страницу после деплоя Pages', pr.number);
+        stage('merged', pr.number);
       } else if (pr.state === 'closed') {
         remember(null);
-        show('PR закрыт', pr.number);
+        stage('failed', pr.number);
+        show('Изменения не были опубликованы', pr.number);
       } else if ((await new GitHubPublisher().currentLayoutSha()) !== current.base) {
         if (!busy && attempt === current)
-          show('Общий макет изменился · черновик сохранён', pr.number);
+          { stage('conflict', pr.number); show('Команда обновила макет · ваша копия сохранена', pr.number); }
       } else if (!busy && attempt === current) {
-        show('PR открыт · проверки и слияние в GitHub', pr.number);
+        { stage('checking', pr.number); }
       }
     } catch {
-      if (!busy && attempt === current) show('Статус в GitHub', current.number);
+      if (!busy && attempt === current) stage('unknown', current.number);
     } finally {
       refreshing = false;
     }
   }
   byId('publish-workspace').addEventListener('click', () => {
     byId('publish-error').textContent = '';
+    renderPreview();
     dialog.showModal();
     tokenInput.focus();
     if (globalThis.PasswordCredential && navigator.credentials?.get) {
@@ -125,14 +171,13 @@ export function initWorkspacePublishing({ storage, publishedSha, draft, markSubm
       if (attempt?.blob !== blob) remember(await publisher.prepare(base, text));
       const pr = await publisher.publish(attempt, text, (pull) => {
         remember({ ...attempt, number: pull.number, head: pull.head.sha });
-        show('PR создан · запрашиваем автослияние', pull.number);
+        stage('submitted', pull.number);
+        show('Изменения отправлены. Следите за статусом в верхней панели', pull.number);
       });
       remember({ ...attempt, number: pr.number, head: pr.head.sha });
       markSubmitted(blob);
-      show(
-        pr.merged_at ? 'В main · ожидается публикация Pages' : 'Автослияние запрошено',
-        pr.number,
-      );
+      stage(pr.merged_at ? 'merged' : 'checking', pr.number);
+      show(pr.merged_at ? 'Обновляем общий дашборд' : 'Изменения отправлены на проверку', pr.number);
       if (globalThis.PasswordCredential && navigator.credentials?.store) {
         void navigator.credentials
           .store(
@@ -146,7 +191,9 @@ export function initWorkspacePublishing({ storage, publishedSha, draft, markSubm
       }
       dialog.close();
     } catch (error) {
-      byId('publish-error').textContent = error.message;
+      const text = error.status === 401 ? 'Неверный или просроченный токен GitHub.' : error.status === 403 ? 'Недостаточно прав для публикации или временное ограничение GitHub.' : error.status === 404 ? 'Репозиторий недоступен для этого аккаунта.' : error.message;
+      byId('publish-error').textContent = text;
+      stage(/Общий макет изменился/.test(error.message) ? 'conflict' : 'failed', attempt?.number);
       if (attempt?.number) {
         show('Проверьте статус PR в GitHub', attempt.number);
         try {
@@ -162,9 +209,15 @@ export function initWorkspacePublishing({ storage, publishedSha, draft, markSubm
       byId('cancel-publish').disabled = false;
     }
   });
-  window.addEventListener('focus', refresh);
+  byId('check-publication').addEventListener('click', () => void refresh());
+  window.addEventListener('focus', () => void refresh());
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') void refresh();
+  });
+  // Deliberately avoid GitHub's low unauthenticated REST API quota.
   window.setInterval(() => {
     if (document.visibilityState === 'visible' && attempt?.blob !== publishedSha) void refresh();
-  }, 15000);
+  }, 180000);
+  if (attempt?.number) stage('submitted', attempt.number);
   void refresh();
 }
