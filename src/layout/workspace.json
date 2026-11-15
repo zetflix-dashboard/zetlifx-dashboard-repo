@@ -1,26 +1,17 @@
 {
   "version": 2,
-  "previousBlobSha": "83dec1aff9e7d8c8759df7363e03f441aebc0b18",
+  "previousBlobSha": "f4ae56c839cd084f01b527fe2e4d3ca0148f4729",
   "spaces": [
     {
       "id": "imported",
       "title": "Общий обзор",
       "widgets": [
         {
-          "type": "heading",
-          "instanceId": "38682dff-7794-4097-b213-2cbcf9e8ba8d",
-          "title": "Пример заголовка",
-          "x": 0,
-          "y": 0,
-          "w": 12,
-          "h": 1
-        },
-        {
           "instanceId": "advertising",
           "chartId": "C18",
           "x": 0,
-          "y": 1,
-          "w": 7,
+          "y": 0,
+          "w": 6,
           "h": 6
         },
         {
@@ -29,18 +20,19 @@
           "localFilters": {
             "quarter": "3"
           },
-          "x": 7,
-          "y": 1,
-          "w": 5,
+          "x": 6,
+          "y": 0,
+          "w": 6,
           "h": 6
         },
         {
-          "instanceId": "9892bfe1-f29c-4939-901a-3a9ccbbe78f0",
-          "chartId": "C14",
+          "type": "heading",
+          "instanceId": "38682dff-7794-4097-b213-2cbcf9e8ba8d",
+          "title": "Пример заголовка",
           "x": 0,
-          "y": 7,
+          "y": 6,
           "w": 12,
-          "h": 5
+          "h": 1
         },
         {
           "instanceId": "6c4a7286-edd0-492c-adef-52886fd497ec",
@@ -49,7 +41,7 @@
             "access": "Пробный период"
           },
           "x": 0,
-          "y": 12,
+          "y": 7,
           "w": 12,
           "h": 1
         }
