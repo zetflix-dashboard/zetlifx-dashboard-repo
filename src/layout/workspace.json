@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "previousBlobSha": "f272a2e5b25f81fad138fb80679d2a1697ec2dac",
+  "previousBlobSha": "be785933bf77bbd51baca53afc40a15c4ed562f2",
   "spaces": [
     {
       "id": "imported",
@@ -11,7 +11,7 @@
           "chartId": "C18",
           "x": 0,
           "y": 0,
-          "w": 6,
+          "w": 5,
           "h": 6
         },
         {
@@ -20,9 +20,9 @@
           "localFilters": {
             "quarter": "3"
           },
-          "x": 6,
+          "x": 5,
           "y": 0,
-          "w": 6,
+          "w": 7,
           "h": 6
         },
         {
