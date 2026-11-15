@@ -1,4 +1,4 @@
-import { datasets } from '../data/datasets.js';
+import { chartDatasets } from '../data/datasets.js';
 import { isNumeric, tableFields } from './contract.js';
 import { treeOption, waterfallOption, funnelOption, heatmapOption } from './specializedOptions.js';
 import { formatValue } from '../ui/format.js';
@@ -36,7 +36,7 @@ const specializedOptions = {
 };
 
 export function buildOption(definition, rows, reducedMotion = false, theme = chartTheme()) {
-  const fields = datasets[definition.dataset].fields;
+  const fields = chartDatasets[definition.dataset].fields;
   const specializedOption = specializedOptions[definition.template];
   if (specializedOption) {
     const { tooltip, ...option } = specializedOption(definition, rows, fields, theme);
@@ -83,9 +83,15 @@ export function buildOption(definition, rows, reducedMotion = false, theme = cha
         {
           name: fields[metric].label,
           type: 'pie',
-          radius: ['45%', '71%'],
-          center: ['50%', '44%'],
-          label: { show: true, formatter: '{d}%', color: theme.text },
+          radius: ['41%', '63%'],
+          center: ['50%', '43%'],
+          label: {
+            show: true,
+            formatter: ({ percent }) => formatValue(percent, 'percent'),
+            color: theme.text,
+            alignTo: 'edge',
+            edgeDistance: 12,
+          },
           itemStyle: { borderColor: theme.tooltip, borderWidth: 2 },
           data: rows.map((row) => ({
             name: String(row[definition.dimension]),
@@ -197,7 +203,7 @@ function compareCells(a, b, unit, direction) {
 }
 
 export function renderTable(container, definition, rows, sort = {}) {
-  const fields = datasets[definition.dataset].fields;
+  const fields = chartDatasets[definition.dataset].fields;
   const columns = tableFields(definition);
   const table = document.createElement('table');
   table.className = 'data-table';

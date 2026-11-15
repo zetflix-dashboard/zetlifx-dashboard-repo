@@ -1,3 +1,5 @@
+import { galleryDatasets } from './galleryDatasets.js';
+
 const SQL0 = [
   'WITH quarter_filter AS (SELECT CAST(? AS DATE) AS first, CAST(? AS DATE) AS last, CAST(? AS VARCHAR) AS quarter)',
   'SELECT',
@@ -260,3 +262,5 @@ export const datasets = Object.freeze({
     },
   },
 });
+
+export const chartDatasets = Object.freeze({ ...datasets, ...galleryDatasets });
