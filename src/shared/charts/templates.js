@@ -1,6 +1,12 @@
 import { datasets } from '../data/datasets.js';
 import { isNumeric, tableFields } from './contract.js';
-import { treeOption, waterfallOption, funnelOption, heatmapOption, sankeyOption } from './specializedOptions.js';
+import {
+  treeOption,
+  waterfallOption,
+  funnelOption,
+  heatmapOption,
+  sankeyOption,
+} from './specializedOptions.js';
 import { formatValue } from '../ui/format.js';
 export const PALETTE = Object.freeze([
   '#407bd0',
@@ -36,11 +42,23 @@ const specializedOptions = {
   sankey: sankeyOption,
 };
 
-export function buildOption(definition, rows, reducedMotion = false, theme = chartTheme(), selectedSource = null) {
+export function buildOption(
+  definition,
+  rows,
+  reducedMotion = false,
+  theme = chartTheme(),
+  selectedSource = null,
+) {
   const fields = datasets[definition.dataset].fields;
   const specializedOption = specializedOptions[definition.template];
   if (specializedOption) {
-    const { tooltip, ...option } = specializedOption(definition, rows, fields, theme, selectedSource);
+    const { tooltip, ...option } = specializedOption(
+      definition,
+      rows,
+      fields,
+      theme,
+      selectedSource,
+    );
     return {
       backgroundColor: 'transparent',
       color: theme.palette,
