@@ -95,8 +95,7 @@ function draftDiff(baseState, candidate) {
         if (previous.x !== widget.x || previous.y !== widget.y) summary.moved++;
         if (previous.w !== widget.w || previous.h !== widget.h) summary.resized++;
         if (
-          JSON.stringify(previous.localFilters || {}) !==
-          JSON.stringify(widget.localFilters || {})
+          JSON.stringify(previous.localFilters || {}) !== JSON.stringify(widget.localFilters || {})
         )
           summary.filters++;
         if (previous.title !== widget.title) summary.headings++;

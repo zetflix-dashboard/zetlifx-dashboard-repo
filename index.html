@@ -40,7 +40,13 @@
         <span class="workspace-option workspace-common">Общий макет</span>
       </label>
       <div class="top-actions">
-        <span id="save-state" class="save-indicator" role="status" aria-live="polite" title="Личные изменения сохраняются только в этом браузере"></span
+        <span
+          id="save-state"
+          class="save-indicator"
+          role="status"
+          aria-live="polite"
+          title="Личные изменения сохраняются только в этом браузере"
+        ></span
         ><button
           id="theme-toggle"
           class="theme-toggle"
@@ -65,7 +71,9 @@
             <p id="progress-description"></p>
             <div class="publication-progress-actions">
               <button id="check-publication" type="button">Проверить статус</button>
-              <a id="progress-link" target="_blank" rel="noopener noreferrer" hidden>Технические детали</a>
+              <a id="progress-link" target="_blank" rel="noopener noreferrer" hidden
+                >Технические детали</a
+              >
             </div>
           </div>
         </details>
@@ -164,7 +172,9 @@
       <p id="message" class="message" role="status" aria-live="polite" hidden></p>
       <aside id="publication-toast" class="publication-toast" hidden>
         <span id="publication-status" role="status"></span>
-        <a id="publication-link" target="_blank" rel="noopener noreferrer" hidden>Технические детали</a>
+        <a id="publication-link" target="_blank" rel="noopener noreferrer" hidden
+          >Технические детали</a
+        >
         <button id="dismiss-publication" type="button" aria-label="Закрыть уведомление">×</button>
       </aside>
       <section id="workspace-panel" role="tabpanel" tabindex="0">
@@ -183,10 +193,14 @@
       <form id="publish-form" method="post">
         <h2 id="publish-title">Опубликовать для команды</h2>
         <p>
-          После отправки мы проверим изменения и обновим общий дашборд. Вы сможете следить за статусом здесь, даже если закроете окно публикации.
+          После отправки мы проверим изменения и обновим общий дашборд. Вы сможете следить за
+          статусом здесь, даже если закроете окно публикации.
         </p>
         <section id="publish-preview" class="publish-preview" aria-label="Что изменится"></section>
-        <p class="publish-privacy">Ваши личные изменения хранятся только в этом браузере. Публикация изменит макет для всей команды.</p>
+        <p class="publish-privacy">
+          Ваши личные изменения хранятся только в этом браузере. Публикация изменит макет для всей
+          команды.
+        </p>
         <details class="token-help">
           <summary>Первая публикация: как подключить GitHub</summary>
           <ol>
@@ -241,8 +255,8 @@
       <form id="import-dialog-form" method="dialog">
         <h2 id="import-dialog-title">Восстановление макета</h2>
         <p>
-          Вы можете перенести одно пространство из сохранённой копии, не удаляя остальные,
-          или заменить весь личный макет.
+          Вы можете перенести одно пространство из сохранённой копии, не удаляя остальные, или
+          заменить весь личный макет.
         </p>
         <label for="import-space-select">Пространство из копии</label>
         <select id="import-space-select"></select>

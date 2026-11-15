@@ -226,10 +226,7 @@ export function initWorkspacePublishing({ storage, publishedSha, draft, preview,
               ? 'Репозиторий недоступен для этого аккаунта.'
               : error.message;
       byId('publish-error').textContent = text;
-      stage(
-        /Общий макет изменился/.test(error.message) ? 'conflict' : 'failed',
-        attempt?.number,
-      );
+      stage(/Общий макет изменился/.test(error.message) ? 'conflict' : 'failed', attempt?.number);
       if (attempt?.number) {
         show('Проверьте статус PR в GitHub', attempt.number);
         try {

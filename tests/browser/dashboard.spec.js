@@ -619,7 +619,9 @@ test('publication resumes a created PR after a network error and never stores th
   await expect(page.locator('#publication-link')).toHaveAttribute('href', /\/pull\/42$/);
   await page.locator('#confirm-publish').click();
   await expect(page.locator('#publish-dialog')).toBeHidden();
-  await expect(page.locator('#publication-status')).toContainText('Изменения отправлены на проверку');
+  await expect(page.locator('#publication-status')).toContainText(
+    'Изменения отправлены на проверку',
+  );
   await expect(page.locator('#publication-progress')).toBeVisible();
   await expect(page.locator('#progress-title')).toContainText('Проверяем изменения');
   expect(updates).toHaveLength(1);
@@ -635,7 +637,6 @@ test('publication resumes a created PR after a network error and never stores th
     'github_pat_test_token',
   );
 });
-
 
 test('personal layout labels and publication preview explain intended team changes', async ({
   page,

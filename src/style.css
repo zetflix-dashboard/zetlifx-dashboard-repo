@@ -1380,7 +1380,6 @@ dialog {
   color: var(--switch-active);
 }
 
-
 /* Publication UX: components inherit existing dashboard theme tokens. */
 .save-indicator {
   display: inline-flex;
