@@ -9,12 +9,12 @@ import {
 } from './specializedOptions.js';
 import { formatValue } from '../ui/format.js';
 export const PALETTE = Object.freeze([
-  '#407bd0',
-  '#278775',
-  '#b67931',
-  '#8865af',
-  '#bf5760',
-  '#507d88',
+  '#2f667b',
+  '#ae7848',
+  '#6278a0',
+  '#946987',
+  '#ae5b64',
+  '#65836c',
 ]);
 export function chartTheme() {
   // Unit tests run without a DOM; browser rendering reads the same CSS tokens.
