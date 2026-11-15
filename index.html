@@ -30,7 +30,17 @@
         ><span class="brand-mark" aria-hidden="true">Z</span>Зетфликс
       </a>
       <div class="top-actions">
-        <span id="save-state" role="status"></span
+        <label class="workspace-switch" for="workspace-view">
+          <span>Локальный</span>
+          <input
+            id="workspace-view"
+            type="checkbox"
+            role="switch"
+            aria-label="Показать общий макет"
+          />
+          <span>Общий</span>
+        </label>
+        <span id="save-state" class="sr-only" role="status"></span
         ><button
           id="theme-toggle"
           class="theme-toggle"
@@ -43,7 +53,7 @@
           aria-label="Перезагрузить все графики"
           title="Перезагрузить все графики"
         ></button
-        ><button id="edit-btn" aria-pressed="false">Настроить</button>
+        ><button id="edit-btn" type="button">Настроить</button>
         <details class="app-menu">
           <summary
             class="menu-trigger"
@@ -134,14 +144,16 @@
           aria-label="Повторить"
           title="Повторить"
         ></button>
+        <button id="save-draft" type="button">Сохранить черновик</button>
         <button id="publish-workspace" type="button">Опубликовать для всех</button>
         <button id="reset-draft" type="button" hidden>Открыть общий макет</button>
       </div>
       <p id="message" class="message" role="status" aria-live="polite" hidden></p>
-      <div class="publication-info">
+      <aside id="publication-toast" class="publication-toast" hidden>
         <span id="publication-status" role="status"></span>
         <a id="publication-link" target="_blank" rel="noopener noreferrer" hidden>Открыть PR</a>
-      </div>
+        <button id="dismiss-publication" type="button" aria-label="Закрыть уведомление">×</button>
+      </aside>
       <section id="workspace-panel" role="tabpanel" tabindex="0">
         <div id="dashboard-grid" class="grid-stack"></div>
         <div id="empty-layout" class="empty-state" hidden>
@@ -161,8 +173,41 @@
           GitHub опубликует макет после проверок. Сохрани токен в менеджере паролей браузера для
           следующих публикаций.
         </p>
+        <details class="token-help">
+          <summary>Как получить токен</summary>
+          <ol>
+            <li>
+              <a
+                href="https://github.com/settings/personal-access-tokens/new"
+                target="_blank"
+                rel="noopener noreferrer"
+                >Откройте создание fine-grained токена в GitHub</a
+              >
+              и задайте имя и срок действия.
+            </li>
+            <li>В <strong>Resource owner</strong> выберите <code>zetflix-dashboard</code>.</li>
+            <li>
+              В <strong>Repository access</strong> выберите
+              <strong>Only select repositories</strong> → <code>zetlifx-dashboard-repo</code>.
+            </li>
+            <li>
+              В <strong>Repository permissions</strong> дайте <strong>Read and write</strong> для
+              <strong>Contents</strong> и <strong>Pull requests</strong>.
+            </li>
+            <li>
+              Нажмите <strong>Generate token</strong> и вставьте токен в поле ниже. Если токен
+              ожидает одобрения, его должен одобрить владелец организации.
+            </li>
+          </ol>
+        </details>
         <label for="github-login">Логин GitHub</label>
-        <input id="github-login" name="username" autocomplete="username" required />
+        <input
+          id="github-login"
+          name="username"
+          autocomplete="username"
+          placeholder="@username"
+          required
+        />
         <label for="github-token">Fine-grained токен GitHub</label>
         <input
           id="github-token"
