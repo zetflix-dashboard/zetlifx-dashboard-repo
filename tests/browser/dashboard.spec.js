@@ -201,6 +201,39 @@ test('theme toggle persists and recolors rendered charts without new queries', a
   await expect(page.locator('.widget-chart canvas')).toHaveCount(2);
 });
 
+test('segmented navigation and chart colors adapt to both appearance modes', async ({ page }) => {
+  await ready(page);
+  const appearance = () =>
+    page.evaluate(() => {
+      const style = (element, pseudo) => getComputedStyle(element, pseudo);
+      const root = document.documentElement;
+      const segment = document.querySelector('.workspace-switch');
+      return {
+        theme: root.dataset.theme,
+        track: style(segment).backgroundColor,
+        thumb: style(segment, '::before').backgroundColor,
+        palette: style(root).getPropertyValue('--chart-palette').trim(),
+        tabRadius: style(document.querySelector('[role="tab"]')).borderRadius,
+        cardRadius: style(document.querySelector('.grid-stack-item-content')).borderRadius,
+      };
+    });
+  const first = await appearance();
+  await page.locator('#theme-toggle').click();
+  await expect
+    .poll(() => appearance().then(({ thumb }) => thumb))
+    .toBe(first.theme === 'dark' ? 'rgb(255, 255, 255)' : 'rgb(32, 32, 34)');
+  const second = await appearance();
+  const light = first.theme === 'light' ? first : second;
+  const dark = first.theme === 'dark' ? first : second;
+
+  expect(light.track).not.toBe(dark.track);
+  expect(light.thumb).toBe('rgb(255, 255, 255)');
+  expect(dark.thumb).toBe('rgb(32, 32, 34)');
+  expect(light.palette).not.toBe(dark.palette);
+  expect(light.tabRadius).toBe('999px');
+  expect(dark.cardRadius).toBe('18px');
+});
+
 test('month range picker supports presets, cancel, and responsive layout', async ({ page }) => {
   await ready(page);
   const trigger = page.locator('#period-trigger');
