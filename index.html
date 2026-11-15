@@ -29,19 +29,8 @@
       <a class="brand" href="./" aria-label="Зетфликс, главная"
         ><span class="brand-mark" aria-hidden="true">Z</span>Зетфликс
       </a>
-      <label class="workspace-switch" for="workspace-view">
-        <input
-          id="workspace-view"
-          type="checkbox"
-          role="switch"
-          aria-label="Показать общий макет"
-        />
-        <span class="workspace-option workspace-local">Локальный</span>
-        <span class="workspace-option workspace-common">Общий</span>
-      </label>
       <div class="top-actions">
-        <span id="save-state" class="sr-only" role="status"></span
-        ><button
+        <button
           id="theme-toggle"
           class="theme-toggle"
           type="button"
@@ -54,10 +43,7 @@
           title="Перезагрузить все графики"
         ></button
         ><button id="edit-btn" type="button">Настроить</button>
-        <button id="save-draft" type="button" hidden>Сохранить черновик</button>
-        <button id="publish-workspace" class="primary" type="button" hidden>
-          Опубликовать для всех
-        </button>
+        <button id="save-workspace" class="primary" type="button" hidden>Сохранить</button>
         <details class="app-menu">
           <summary
             class="menu-trigger"
@@ -70,6 +56,7 @@
             <button id="rename-space">Переименовать</button
             ><button id="export-btn">Экспорт пространств</button
             ><button id="import-btn">Импорт пространств</button
+            ><button id="recover-workspace" hidden>Скачать прежние правки</button
             ><button id="delete-space" class="danger">Удалить пространство</button>
           </div>
         </details>
@@ -148,13 +135,11 @@
           aria-label="Повторить"
           title="Повторить"
         ></button>
-        <button id="reset-draft" type="button" hidden>Открыть общий макет</button>
       </div>
       <p id="message" class="message" role="status" aria-live="polite" hidden></p>
-      <aside id="publication-toast" class="publication-toast" hidden>
-        <span id="publication-status" role="status"></span>
-        <a id="publication-link" target="_blank" rel="noopener noreferrer" hidden>Открыть PR</a>
-        <button id="dismiss-publication" type="button" aria-label="Закрыть уведомление">×</button>
+      <aside id="sync-notice" class="sync-notice" hidden>
+        <span id="sync-status" role="status"></span>
+        <button id="resolve-sync" type="button" hidden></button>
       </aside>
       <section id="workspace-panel" role="tabpanel" tabindex="0">
         <div id="dashboard-grid" class="grid-stack"></div>
@@ -168,60 +153,28 @@
         </div>
       </section>
     </main>
-    <dialog id="publish-dialog" aria-labelledby="publish-title">
-      <form id="publish-form" method="post">
-        <h2 id="publish-title">Опубликовать для всех</h2>
-        <p>
-          GitHub опубликует макет после проверок. Сохрани токен в менеджере паролей браузера для
-          следующих публикаций.
-        </p>
+    <dialog id="sync-access" aria-labelledby="sync-access-title">
+      <form id="sync-access-form">
+        <h2 id="sync-access-title">Подключить GitHub</h2>
+        <p>Ключ используется для сохранения макета и запоминается на время этой вкладки.</p>
         <details class="token-help">
-          <summary>Как получить токен</summary>
-          <ol>
-            <li>
-              <a
-                href="https://github.com/settings/personal-access-tokens/new"
-                target="_blank"
-                rel="noopener noreferrer"
-                >Откройте создание fine-grained токена в GitHub</a
-              >
-              и задайте имя и срок действия.
-            </li>
-            <li>В <strong>Resource owner</strong> выберите <code>zetflix-dashboard</code>.</li>
-            <li>
-              В <strong>Repository access</strong> выберите
-              <strong>Only select repositories</strong> → <code>zetlifx-dashboard-repo</code>.
-            </li>
-            <li>
-              В <strong>Repository permissions</strong> дайте <strong>Read and write</strong> для
-              <strong>Contents</strong> и <strong>Pull requests</strong>.
-            </li>
-            <li>
-              Нажмите <strong>Generate token</strong> и вставьте токен в поле ниже. Если токен
-              ожидает одобрения, его должен одобрить владелец организации.
-            </li>
-          </ol>
+          <summary>Как получить ключ</summary>
+          <p>
+            <a
+              href="https://github.com/settings/personal-access-tokens/new"
+              target="_blank"
+              rel="noopener noreferrer"
+              >Создайте fine-grained токен GitHub</a
+            >
+            для <code id="sync-access-repo"></code> с разрешением
+            <strong>Contents: Read and write</strong>.
+          </p>
         </details>
-        <label for="github-login">Логин GitHub</label>
-        <input
-          id="github-login"
-          name="username"
-          autocomplete="username"
-          placeholder="@username"
-          required
-        />
-        <label for="github-token">Fine-grained токен GitHub</label>
-        <input
-          id="github-token"
-          name="password"
-          type="password"
-          autocomplete="current-password"
-          required
-        />
-        <p id="publish-error" role="alert"></p>
+        <label for="github-token">Ключ GitHub</label>
+        <input id="github-token" type="password" autocomplete="off" required />
         <div class="dialog-actions">
-          <button id="cancel-publish" type="button">Отмена</button>
-          <button id="confirm-publish" class="primary" type="submit">Опубликовать</button>
+          <button id="sync-access-cancel" type="button">Позже</button>
+          <button class="primary" type="submit">Подключить и сохранить</button>
         </div>
       </form>
     </dialog>
