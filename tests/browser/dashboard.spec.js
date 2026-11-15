@@ -248,6 +248,13 @@ test('theme toggle persists and recolors rendered charts without new queries', a
 test('month range picker supports presets, cancel, and responsive layout', async ({ page }) => {
   await ready(page);
   const trigger = page.locator('#period-trigger');
+  const toolbarLayout = () =>
+    page.locator('.workspace-toolbar').evaluate((toolbar) => {
+      const tabs = toolbar.querySelector('.space-navigation').getBoundingClientRect();
+      const controls = toolbar.querySelector('.period-controls').getBoundingClientRect();
+      return { gap: controls.left - tabs.right, onOneRow: controls.top < tabs.bottom };
+    });
+  expect(await toolbarLayout()).toEqual({ gap: 14, onOneRow: true });
   await expect(trigger).toContainText('2024');
   await trigger.click();
   await expect(page.locator('#period-panel')).toBeVisible();
@@ -268,6 +275,7 @@ test('month range picker supports presets, cancel, and responsive layout', async
   await expect(trigger).toContainText('2024');
   await expect(trigger).toContainText('2025');
   await page.setViewportSize({ width: 390, height: 844 });
+  expect(await toolbarLayout()).toEqual({ gap: 8, onOneRow: true });
   await trigger.click();
   await expect(page.locator('#period-panel')).toBeVisible();
   await expect
