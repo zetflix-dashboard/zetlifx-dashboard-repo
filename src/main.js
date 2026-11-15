@@ -303,6 +303,7 @@ initWorkspacePublishing({
   storage,
   publishedSha,
   draft: () => ({ state: draftStore.current(), base: draftBase }),
+  preview: () => draftDiff(published, draftStore.current()),
   markSubmitted: (blob) => {
     submittedSha = blob;
     flush();
