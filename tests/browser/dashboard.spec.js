@@ -52,7 +52,7 @@ test('dynamic spaces persist, rename, delete, undo and keyboard navigation', asy
   await page.locator('#space-form').getByRole('button', { name: 'Сохранить' }).click();
   await page.locator('#delete-space').click();
   await page.locator('#confirm-dialog button[value="confirm"]').click();
-  await expect(page.getByRole('tab')).toHaveCount(1);
+  await expect(page.getByRole('tab')).toHaveCount(2);
   await page.locator('#edit-btn').click();
   await page.locator('#undo-btn').click();
   await expect(page.getByRole('tab', { name: 'Финансы' })).toBeVisible();
@@ -131,7 +131,7 @@ test('legacy empty layout is kept and malformed import does not replace work', a
     buffer: Buffer.from('{"version": 99}'),
   });
   await expect(page.locator('#message')).toContainText('Ошибка импорта');
-  await expect(page.getByRole('tab')).toHaveCount(1);
+  await expect(page.getByRole('tab')).toHaveCount(2);
 });
 test('loading failure can recover with Retry without damaging other cards', async ({ page }) => {
   await page.route('**/data/pl_control.parquet*', (route) => route.abort());
@@ -443,4 +443,67 @@ test('C03 quarter is a per-card filter and the system renders a subtle inline C-
   await expect(page.locator('[data-instance-id="c03-initial"] .widget-chart canvas')).toHaveCount(
     1,
   );
+});
+
+test('gallery renders all ten templates and preserves a saved workspace on desktop and mobile', async ({
+  page,
+}) => {
+  const saved = {
+    version: 2,
+    activeId: 'existing',
+    spaces: [{ id: 'existing', title: 'Мой сохранённый дашборд', widgets: [] }],
+  };
+  await page.addInitScript(
+    ({ key, saved }) => {
+      if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(saved));
+    },
+    { key, saved },
+  );
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto('./');
+  const gallery = page.getByRole('tab', { name: 'Все типы графиков' });
+  await gallery.click();
+  await expect(gallery).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#gallery-note')).toContainText('Демонстрационные данные');
+  await expect(page.locator('#edit-btn')).toBeHidden();
+  await expect(page.locator('#period-trigger')).toBeHidden();
+  const grid = page.locator('#dashboard-grid');
+  await expect(grid.locator('[data-chart-template]')).toHaveCount(10);
+  for (const template of [
+    'line',
+    'bar',
+    'combo',
+    'scatter',
+    'pie',
+    'tree',
+    'waterfall',
+    'funnel',
+    'heatmap',
+  ]) {
+    await expect(grid.locator(`[data-chart-template="${template}"] canvas`).first()).toBeVisible();
+  }
+  const table = grid.locator('[data-chart-template="table"]');
+  await expect(table.locator('tfoot tr')).toContainText('Итого');
+  await expect(grid.locator('.widget-overlay:visible')).toHaveCount(0);
+  await page.screenshot({ path: 'test-results/chart-gallery-desktop.png', fullPage: true });
+
+  const matrix = grid.locator('[data-chart-template="heatmap"]');
+  await matrix.locator('.widget-table').click();
+  await expect(matrix.locator('tbody tr')).toHaveCount(36);
+  await expect(matrix.locator('tbody td').getByText('—', { exact: true })).toHaveCount(15);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  await expect(gallery).toHaveAttribute('aria-selected', 'true');
+  await expect(grid.locator('[data-chart-template]')).toHaveCount(10);
+  await expect(grid.locator('[data-chart-template="heatmap"]')).toHaveAttribute('gs-w', '1');
+  await expect(grid.locator('[data-chart-template="heatmap"] canvas').first()).toBeVisible();
+  await page.screenshot({ path: 'test-results/chart-gallery-mobile.png', fullPage: true });
+
+  await page.getByRole('tab', { name: saved.spaces[0].title }).click();
+  await expect(page.locator('#empty-layout')).toBeVisible();
+  await expect(page.locator('#gallery-note')).toBeHidden();
+  await expect(page.locator('#edit-btn')).toBeVisible();
+  expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)), key)).toEqual(saved);
+  expect(errors).toEqual([]);
 });
