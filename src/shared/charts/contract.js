@@ -42,6 +42,8 @@ export function validateChart(raw, catalog = datasets) {
     'localFilters',
     'totals',
     'aggregation',
+    'sourceTitle',
+    'targetTitle',
     ...Object.values(extraFields),
   ]);
   if (!/^C\d{2}$/.test(raw.id) || !text(raw.title, 90) || !text(raw.question, 300))
@@ -71,6 +73,13 @@ export function validateChart(raw, catalog = datasets) {
       fields[raw[extra]].unit !== 'text')
   )
     throw new Error('Некорректные поля шаблона');
+  if (
+    (raw.template !== 'sankey' &&
+      (raw.sourceTitle !== undefined || raw.targetTitle !== undefined)) ||
+    (raw.sourceTitle !== undefined && !text(raw.sourceTitle, 60)) ||
+    (raw.targetTitle !== undefined && !text(raw.targetTitle, 60))
+  )
+    throw new Error('Заголовки сторон доступны только Sankey');
   if (raw.template !== 'indicator' && raw.aggregation !== undefined)
     throw new Error('Агрегация поддерживается только индикатором');
   if (raw.template === 'indicator') {
