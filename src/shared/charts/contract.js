@@ -14,7 +14,12 @@ export const TEMPLATES = Object.freeze([
   'indicator',
   'sankey',
 ]);
-const extraFields = { tree: 'parent', waterfall: 'stepType', heatmap: 'category', sankey: 'target' };
+const extraFields = {
+  tree: 'parent',
+  waterfall: 'stepType',
+  heatmap: 'category',
+  sankey: 'target',
+};
 const singleSeries = ['pie', 'tree', 'waterfall', 'funnel', 'heatmap', 'sankey'];
 export const isNumeric = (unit) => !['month', 'text'].includes(unit);
 const text = (s, max = 160) => typeof s === 'string' && s.trim().length > 0 && s.length <= max;
@@ -96,10 +101,7 @@ export function validateChart(raw, catalog = datasets) {
     keys(raw.series[0], ['field']);
     if (!validField(raw.series[0].field) || !isNumeric(fields[raw.series[0].field].unit))
       throw new Error('Индикатор требует числовое поле');
-    if (
-      raw.aggregation !== undefined &&
-      !['sum', 'avg', 'min', 'max'].includes(raw.aggregation)
-    )
+    if (raw.aggregation !== undefined && !['sum', 'avg', 'min', 'max'].includes(raw.aggregation))
       throw new Error('Неизвестная агрегация индикатора');
     if (raw.aggregation === 'sum' && fields[raw.series[0].field].unit === 'percent')
       throw new Error('Нельзя суммировать процентные показатели');
@@ -207,7 +209,11 @@ function validateStructure(rows, definition, fields) {
   const categoryValue = (value, field) =>
     isNumeric(fields[field].unit) ? Number(value) : String(value);
   const dimensions =
-    template === 'heatmap' ? [dimension, category] : template === 'sankey' ? [dimension, target] : [dimension];
+    template === 'heatmap'
+      ? [dimension, category]
+      : template === 'sankey'
+        ? [dimension, target]
+        : [dimension];
   const seen = new Set();
   for (const row of rows) {
     if (dimensions.some((field) => row[field] == null || row[field] === ''))
