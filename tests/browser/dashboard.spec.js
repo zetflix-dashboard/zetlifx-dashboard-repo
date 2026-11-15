@@ -6,6 +6,7 @@ const fixture = readFileSync('tests/fixtures/workspace.json', 'utf8');
 function mockWorkspace() {
   let file = fixture;
   let writes = 0;
+  let loseResponse = false;
   const sha = () => createHash('sha1').update(file).digest('hex');
   async function install(page) {
     await page.route('https://raw.githubusercontent.com/**/workspace.json?*', (route) =>
@@ -20,10 +21,20 @@ function mockWorkspace() {
       if (update.sha !== sha()) return route.fulfill({ status: 409 });
       file = Buffer.from(update.content, 'base64').toString();
       writes++;
+      if (loseResponse) {
+        loseResponse = false;
+        return route.abort();
+      }
       await route.fulfill({ json: { content: { sha: sha() } } });
     });
   }
-  return { install, writes: () => writes };
+  return {
+    install,
+    writes: () => writes,
+    loseNextResponse: () => {
+      loseResponse = true;
+    },
+  };
 }
 
 const key = 'zetflix.shared-workspace.v1';
@@ -541,4 +552,25 @@ test('one save synchronizes a second browser session without reloading', async (
     await authorContext.close();
     await other.close();
   }
+});
+
+test('a lost save response is retried without another commit', async ({ page }) => {
+  const remote = mockWorkspace();
+  await remote.install(page);
+  await page.goto('./');
+  await page.locator('#edit-btn').click();
+  await page.locator('#add-heading-btn').click();
+  await page.locator('#heading-text').fill('Сохраняем повторно');
+  await page.locator('#heading-form button[type=submit]').click();
+  remote.loseNextResponse();
+  await page.locator('#save-workspace').click();
+  await expect(page.locator('#sync-status')).toHaveText(
+    'Сохраним, когда связь с GitHub восстановится',
+  );
+  await expect(page.locator('.heading-title')).toHaveText('Сохраняем повторно');
+  expect(remote.writes()).toBe(1);
+  await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  await expect(page.locator('#sync-notice')).toBeHidden();
+  await expect(page.locator('#edit-btn')).toBeEnabled();
+  expect(remote.writes()).toBe(1);
 });

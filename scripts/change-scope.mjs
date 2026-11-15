@@ -84,6 +84,8 @@ export function runCli() {
     ? JSON.parse(readFileSync(QUEUED_PULL_REQUEST_PATH, 'utf8'))
     : event.pull_request;
   if (!pull) throw new Error('PR event required');
+  if (pull.head.ref.startsWith('admin/layout-'))
+    throw new Error('Save workspace changes from the current dashboard tab');
   if (queued) {
     const [first, second, extra] = execFileSync(
       'git',

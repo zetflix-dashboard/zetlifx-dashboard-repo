@@ -212,11 +212,6 @@ button:disabled {
   padding: 7px 11px;
 }
 
-#save-state {
-  color: var(--muted);
-  font-size: 11px;
-  margin-right: 8px;
-}
 .app-menu {
   position: relative;
 }
@@ -989,9 +984,6 @@ dialog label {
   .period-controls {
     width: 100%;
     justify-content: flex-start;
-  }
-  #save-state {
-    display: none;
   }
   .topbar {
     padding: 12px 16px;
