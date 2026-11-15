@@ -70,10 +70,20 @@ let confirmAction;
 let saveTimer;
 let saved = Boolean(storage);
 const saveStatus = byId('save-state');
-function statusSaved(text) { saveStatus.textContent = text; }
+function statusSaved(text) {
+  saveStatus.textContent = text;
+}
 function draftDiff(baseState, candidate) {
   const oldSpaces = new Map(baseState.spaces.map((space) => [space.id, space]));
-  const summary = { spaces: 0, added: 0, removed: 0, moved: 0, resized: 0, filters: 0, headings: 0 };
+  const summary = {
+    spaces: 0,
+    added: 0,
+    removed: 0,
+    moved: 0,
+    resized: 0,
+    filters: 0,
+    headings: 0,
+  };
   for (const space of candidate.spaces) {
     const old = oldSpaces.get(space.id);
     if (!old || old.title !== space.title) summary.spaces++;
@@ -84,7 +94,11 @@ function draftDiff(baseState, candidate) {
       else {
         if (previous.x !== widget.x || previous.y !== widget.y) summary.moved++;
         if (previous.w !== widget.w || previous.h !== widget.h) summary.resized++;
-        if (JSON.stringify(previous.localFilters || {}) !== JSON.stringify(widget.localFilters || {})) summary.filters++;
+        if (
+          JSON.stringify(previous.localFilters || {}) !==
+          JSON.stringify(widget.localFilters || {})
+        )
+          summary.filters++;
         if (previous.title !== widget.title) summary.headings++;
         original.delete(widget.instanceId);
       }
