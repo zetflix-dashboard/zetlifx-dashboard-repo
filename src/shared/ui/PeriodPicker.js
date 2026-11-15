@@ -79,6 +79,12 @@ export function initPeriodPicker(root, filters, onError = () => {}) {
       ? 'Выберите последний месяц'
       : 'Выберите первый месяц или готовый период';
   }
+  function positionPanel() {
+    if (panel.hidden) return;
+    const start = trigger.getBoundingClientRect().left;
+    const rightmostStart = document.documentElement.clientWidth - panel.offsetWidth - 12;
+    panel.style.left = Math.max(12, Math.min(start, rightmostStart)) - start + 'px';
+  }
   function open() {
     const current = filters.get();
     from = current.periodFrom;
@@ -87,6 +93,7 @@ export function initPeriodPicker(root, filters, onError = () => {}) {
     initialFocus = document.activeElement;
     panel.hidden = false;
     render();
+    positionPanel();
     syncLabel();
     grid.querySelector('[data-month="' + from + '"]')?.focus();
   }
@@ -97,6 +104,7 @@ export function initPeriodPicker(root, filters, onError = () => {}) {
     syncLabel();
     (initialFocus?.isConnected ? initialFocus : trigger).focus();
   }
+  window.addEventListener('resize', positionPanel);
   trigger.addEventListener('click', () => (panel.hidden ? open() : close()));
   cancel.addEventListener('click', close);
   apply.addEventListener('click', () => {
