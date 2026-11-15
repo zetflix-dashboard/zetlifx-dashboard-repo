@@ -83,9 +83,15 @@ export function buildOption(definition, rows, reducedMotion = false, theme = cha
         {
           name: fields[metric].label,
           type: 'pie',
-          radius: ['45%', '71%'],
-          center: ['50%', '44%'],
-          label: { show: true, formatter: '{d}%', color: theme.text },
+          radius: ['41%', '63%'],
+          center: ['50%', '43%'],
+          label: {
+            show: true,
+            formatter: ({ percent }) => formatValue(percent, 'percent'),
+            color: theme.text,
+            alignTo: 'edge',
+            edgeDistance: 12,
+          },
           itemStyle: { borderColor: theme.tooltip, borderWidth: 2 },
           data: rows.map((row) => ({
             name: String(row[definition.dimension]),
