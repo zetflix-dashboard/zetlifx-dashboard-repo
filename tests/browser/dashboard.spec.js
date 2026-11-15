@@ -46,8 +46,7 @@ test('dynamic spaces persist, rename, delete, undo and keyboard navigation', asy
     )
     .toBe(2);
   await page.reload();
-  await expect(page.getByRole('tab', { name: 'Контент' })).toHaveCount(0);
-  await page.locator('#edit-btn').click();
+  await expect(page.getByRole('tab', { name: 'Контент' })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Контент' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('.grid-stack-item')).toHaveCount(1);
   await page.locator('.app-menu summary').click();
@@ -85,7 +84,7 @@ test('mobile uses full width and saves canonical layout across resize', async ({
   await expect
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
     .toBe(true);
-  await page.locator('#edit-btn').click();
+  await page.locator('#save-draft').click();
   await page.screenshot({ path: 'test-results/dashboard-mobile.png', fullPage: true });
   await page.reload();
   await page.locator('#edit-btn').click();
@@ -135,8 +134,7 @@ test('legacy empty layout is kept and malformed import does not replace work', a
     ),
   );
   await page.goto('./');
-  await expect(page.getByRole('tab', { name: 'Мой дашборд' })).toBeVisible();
-  await page.locator('#edit-btn').click();
+  await expect(page.getByRole('tab', { name: 'Пространство' })).toBeVisible();
   await expect(page.locator('#empty-layout')).toBeVisible();
   await expect(page.locator('.grid-stack-item')).toHaveCount(0);
   await page.locator('#import-file').setInputFiles({
@@ -255,7 +253,7 @@ test('OLED appearance and compact read-only widget actions', async ({ page }) =>
   await page.locator('#edit-btn').click();
   await expect(page.locator('.widget-grip').first()).toBeVisible();
   await expect(page.locator('.widget-remove').first()).toBeVisible();
-  await page.locator('#edit-btn').click();
+  await page.locator('#save-draft').click();
   await expect(page.locator('.widget-grip').first()).toBeHidden();
 });
 
@@ -281,7 +279,7 @@ test('C14 scatter, C15 donut and C20 RFM load with actual Parquet and data bars'
   await expect(donut.locator('canvas')).toHaveCount(1);
   const scatter = page.locator('.grid-stack-item').filter({ hasText: 'Стоимость часа по тайтлам' });
   await expect(scatter.locator('canvas')).toHaveCount(1);
-  await page.locator('#edit-btn').click();
+  await page.locator('#save-draft').click();
   await expect(page.locator('.widget-grip').first()).toBeHidden();
 });
 
@@ -315,11 +313,15 @@ test('floating editor supports semantic headings, persistence and undo', async (
   await expect(page.locator('.heading-title')).toHaveText('Экономика подписок');
   await page.locator('#undo-btn').click();
   await expect(page.locator('.heading-title')).toHaveText('Важные показатели');
-  await page.locator('#edit-btn').click();
+  await page.locator('#save-draft').click();
   await expect(page.locator('.heading-controls')).toBeHidden();
-  await page.reload();
+  await expect(page.locator('.heading-title')).toHaveText('Важные показатели');
+  await page.getByRole('switch').check();
   await expect(page.locator('.heading-title')).toHaveCount(0);
-  await page.locator('#edit-btn').click();
+  await page.getByRole('switch').uncheck();
+  await expect(page.locator('.heading-title')).toHaveText('Важные показатели');
+  await page.getByRole('switch').check();
+  await page.reload();
   await expect(page.locator('.heading-title')).toHaveText('Важные показатели');
   await expect(page.locator('.widget-chart canvas')).toHaveCount(2);
 });
@@ -366,8 +368,8 @@ test('local filters are isolated by widget and saved with the workspace', async 
     )
     .toBe('Драма');
   await expect(cards.locator('.widget-overlay:visible')).toHaveCount(0, { timeout: 120000 });
-  await page.locator('#edit-btn').click();
-  await expect(selector).toHaveCount(0);
+  await page.locator('#save-draft').click();
+  await expect(selector).toHaveValue('Драма');
   await page.reload();
   await page.locator('#edit-btn').click();
   await expect(cards.locator('.widget-filter-select')).toHaveValue('Драма');
@@ -480,7 +482,7 @@ test('refresh controls recompute SQL while an ordinary reload restores cached ro
   await expect(single).toHaveText('');
   await page.locator('#edit-btn').click();
   await expect(single).toBeHidden();
-  await page.locator('#edit-btn').click();
+  await page.locator('#save-draft').click();
   await expect(page.locator('.widget-overlay:visible')).toHaveCount(0);
   await single.click();
   await expect(page.locator('.widget-overlay:visible')).toHaveCount(0);
@@ -497,10 +499,7 @@ test('publication resumes a created PR after a network error and never stores th
 }) => {
   const { readFile } = await import('node:fs/promises');
   const { workspaceBlobSha } = await import('../../src/layout/PublishedWorkspace.js');
-  const original = await readFile(
-    new URL('../../src/layout/workspace.json', import.meta.url),
-    'utf8',
-  );
+  const original = await readFile(new URL('../fixtures/workspace.json', import.meta.url), 'utf8');
   const base = await workspaceBlobSha(original);
   const current = '1'.repeat(40);
   const head = '2'.repeat(40);
@@ -579,7 +578,8 @@ test('publication resumes a created PR after a network error and never stores th
   await page.locator('#heading-text').fill('Общий заголовок');
   await page.locator('#heading-form button[type="submit"]').click();
   await page.locator('#publish-workspace').click();
-  await page.locator('#github-login').fill('editor');
+  await expect(page.locator('#github-login')).toHaveAttribute('placeholder', '@username');
+  await page.locator('#github-login').fill('@editor');
   await page.locator('#github-token').fill('github_pat_test_token');
   await page.locator('#confirm-publish').click();
   await expect(page.locator('#publish-error')).not.toBeEmpty();

@@ -23,8 +23,18 @@ function parquetVersions() {
   };
 }
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [parquetVersions()],
+  resolve: {
+    alias: [
+      {
+        find: /^@published-workspace(?=\?|$)/,
+        replacement: resolve(
+          mode === 'test' ? 'tests/fixtures/workspace.json' : 'src/layout/workspace.json',
+        ),
+      },
+    ],
+  },
   server: { host: '127.0.0.1' },
   build: { target: 'es2022' },
-});
+}));

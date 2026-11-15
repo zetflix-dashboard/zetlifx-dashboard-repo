@@ -12,24 +12,51 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 2
+      - name: Detect layout-only update
+        id: changes
+        env:
+          BASE_SHA: ${{ github.event.merge_group.base_sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == pull_request ]]; then
+            BASE_SHA="$(git rev-parse HEAD^1)"
+          fi
+          if [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]] && git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null; then
+            git diff --name-only --no-renames -z "$BASE_SHA" HEAD -- > "$RUNNER_TEMP/dashboard-diff"
+            mapfile -d '' -t paths < "$RUNNER_TEMP/dashboard-diff"
+            if [[ ${#paths[@]} == 1 && "${paths[0]}" == src/layout/workspace.json ]]; then
+              echo "layout_only=true" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+      - name: Validate published layout
+        run: node scripts/validate-workspace.mjs
       - uses: actions/setup-node@v4
+        if: steps.changes.outputs.layout_only != 'true'
         with:
           node-version: '22'
           cache: npm
-      - run: npm ci --no-audit --no-fund
-      - run: npm run format:check
-      - run: npm run validate:charts
-      - run: npm run validate:workspace
-      - run: npm test
-      - run: npm run build:pages
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+      - if: steps.changes.outputs.layout_only != 'true'
+        run: npm ci --no-audit --no-fund
+      - if: steps.changes.outputs.layout_only != 'true'
+        run: npm run format:check
+      - if: steps.changes.outputs.layout_only != 'true'
+        run: npm run validate:charts
+      - if: steps.changes.outputs.layout_only != 'true'
+        run: npm test
+      - if: steps.changes.outputs.layout_only != 'true'
+        run: npm run build:pages
+      - if: steps.changes.outputs.layout_only != 'true'
+        run: npx playwright install --with-deps chromium
+      - if: steps.changes.outputs.layout_only != 'true'
+        run: npm run test:e2e
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: failure() && steps.changes.outputs.layout_only != 'true'
         with:
           name: browser-test-results
           path: test-results/

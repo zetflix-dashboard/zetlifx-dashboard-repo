@@ -6,7 +6,7 @@ export default defineConfig({
   timeout: 60000,
   expect: { timeout: 30000 },
   use: {
-    baseURL: 'http://127.0.0.1:4173/zetlifx-dashboard-repo/',
+    baseURL: 'http://127.0.0.1:4184/zetlifx-dashboard-repo/',
     headless: true,
     reducedMotion: 'reduce',
     launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined },
@@ -15,8 +15,9 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: 'npm run preview -- --host 127.0.0.1 --port 4173 --base /zetlifx-dashboard-repo/',
-    url: 'http://127.0.0.1:4173/zetlifx-dashboard-repo/',
-    reuseExistingServer: !process.env.CI,
+    command:
+      'npm run build:pages -- --mode test --outDir dist-test && npm run preview -- --host 127.0.0.1 --port 4184 --base /zetlifx-dashboard-repo/ --outDir dist-test',
+    url: 'http://127.0.0.1:4184/zetlifx-dashboard-repo/',
+    reuseExistingServer: false,
   },
 });

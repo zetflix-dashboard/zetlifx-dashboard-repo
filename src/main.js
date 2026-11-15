@@ -5,7 +5,7 @@ import { DataClient } from './shared/data/DataClient.js';
 import { FilterStore } from './shared/filters/FilterStore.js';
 import { GridManager } from './layout/GridManager.js';
 import { WorkspaceStore, validateWorkspace } from './layout/WorkspaceStore.js';
-import sharedWorkspace from './layout/workspace.json?raw';
+import sharedWorkspace from '@published-workspace?raw';
 import {
   ACTIVE_KEY,
   DRAFT_KEY,
@@ -60,7 +60,9 @@ let draftStore = loaded.state ? new WorkspaceStore(loaded.state, known) : null;
 let draftBase = loaded.base || publishedSha;
 let submittedSha = loaded.submittedSha;
 let recovery = Boolean(loaded.recovery);
-let store = new WorkspaceStore(published, known);
+const commonStore = new WorkspaceStore(published, known);
+let store = draftStore ?? commonStore;
+let showCommon = false;
 let editing = false;
 let naming = 'create';
 let headingEditingId = null;
@@ -117,7 +119,7 @@ function flush() {
       JSON.stringify({ state: draftStore.current(), base: draftBase, submittedSha }),
     );
     saved = true;
-    byId('save-state').textContent = editing ? 'Черновик в браузере' : 'Общий макет';
+    byId('save-state').textContent = showCommon ? 'Общий макет' : 'Локальный макет';
   } catch {
     byId('save-state').textContent = 'Не сохранено';
     message(
@@ -160,7 +162,7 @@ function renderTabs() {
     button.tabIndex = space.id === store.state.activeId ? 0 : -1;
     button.addEventListener('click', () => {
       store.select(space.id);
-      if (editing) persist();
+      if (store === draftStore) persist();
       else {
         selected = space.id;
         try {
@@ -218,25 +220,39 @@ function setEditing(value) {
   if (editing === value) return;
   if (value) {
     draftStore ??= new WorkspaceStore(store.current(), known);
+    showCommon = false;
     store = draftStore;
   } else {
     if (!saved) flush();
-    store = new WorkspaceStore(
-      validatePublishedWorkspace(JSON.parse(sharedWorkspace), known, selected),
-      known,
-    );
+    if (!saved) return;
   }
   editing = value;
   grid.setEditing(editing);
   byId('editor-bar').hidden = !editing;
-  byId('edit-btn').textContent = editing ? 'Готово' : 'Настроить';
-  byId('edit-btn').setAttribute('aria-pressed', String(editing));
-  byId('save-state').textContent = editing ? 'Черновик в браузере' : 'Общий макет';
-  if (editing && draftBase !== publishedSha)
-    message('Черновик сделан на старом макете. Экспортируйте его или откройте новый общий макет.');
-  render();
+  byId('edit-btn').hidden = editing;
+  byId('workspace-view').disabled = editing;
+  byId('workspace-view').checked = showCommon;
+  if (editing) {
+    if (draftBase !== publishedSha)
+      message(
+        'Черновик сделан на старом макете. Экспортируйте его или откройте новый общий макет.',
+      );
+    render();
+    byId('save-draft').focus();
+  } else {
+    render();
+    byId('edit-btn').focus();
+  }
+  byId('save-state').textContent = 'Локальный макет';
 }
-byId('edit-btn').addEventListener('click', () => setEditing(!editing));
+byId('edit-btn').addEventListener('click', () => setEditing(true));
+byId('save-draft').addEventListener('click', () => setEditing(false));
+byId('workspace-view').addEventListener('change', (event) => {
+  showCommon = event.target.checked;
+  store = showCommon ? commonStore : (draftStore ?? commonStore);
+  byId('save-state').textContent = showCommon ? 'Общий макет' : 'Локальный макет';
+  render();
+});
 byId('reset-draft').addEventListener('click', () =>
   confirm(
     'Открыть новый общий макет?',
@@ -523,5 +539,5 @@ window.addEventListener('pagehide', (event) => {
   }
 });
 render();
-byId('save-state').textContent = 'Общий макет';
+byId('save-state').textContent = 'Локальный макет';
 if (loaded.warning) message(loaded.warning);
