@@ -69,3 +69,17 @@ test('project deletions remove every instance and survive concurrent workspace e
   assert.equal(merged.spaces[0].widgets[0].h, 4);
   assert.deepEqual(mergeWorkspace(before, editing, deleting, known), merged);
 });
+
+test('display titles are merged per chart and survive workspace edits', () => {
+  const local = { ...structuredClone(base), chartTitles: { C03: 'Финансы' } };
+  const remote = { ...structuredClone(base), chartTitles: { C18: 'Реклама' } };
+  remote.spaces[0].widgets[1].h = 4;
+  const merged = mergeWorkspace(base, local, remote, known);
+  assert.equal(merged.version, 4);
+  assert.deepEqual(merged.chartTitles, { C03: 'Финансы', C18: 'Реклама' });
+  assert.equal(merged.spaces[0].widgets[1].h, 4);
+  assert.throws(
+    () => mergeWorkspace(base, local, { ...remote, chartTitles: { C03: 'Выручка' } }, known),
+    WorkspaceConflict,
+  );
+});

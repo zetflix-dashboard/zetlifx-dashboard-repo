@@ -14,7 +14,13 @@ export function validateSharedWorkspace(raw, known, activeId) {
     ? activeId
     : (spaces?.[0]?.id ?? null);
   return validateWorkspace(
-    { version: raw?.version, activeId: selected, spaces, removedCharts: raw?.removedCharts },
+    {
+      version: raw?.version,
+      activeId: selected,
+      spaces,
+      removedCharts: raw?.removedCharts,
+      chartTitles: raw?.chartTitles,
+    },
     known,
   );
 }
@@ -29,7 +35,9 @@ export function serializeWorkspace(state) {
 
 const equal = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 export const sameLayout = (a, b) =>
-  equal(a.spaces, b.spaces) && equal(a.removedCharts ?? [], b.removedCharts ?? []);
+  equal(a.spaces, b.spaces) &&
+  equal(a.removedCharts ?? [], b.removedCharts ?? []) &&
+  equal(a.chartTitles ?? {}, b.chartTitles ?? {});
 
 export class WorkspaceConflict extends Error {
   constructor() {
@@ -83,8 +91,21 @@ export function mergeWorkspace(base, local, remote, known) {
     omitRemovedCharts(state.spaces, removedCharts),
   );
   const spaces = mergeById(before, wanted, latest, 'id', mergeSpace);
+  const titleIds = new Set(
+    [base, local, remote].flatMap((state) => Object.keys(state.chartTitles ?? {})),
+  );
+  const chartTitles = Object.fromEntries(
+    [...titleIds].flatMap((id) => {
+      const title = mergeValue(
+        base.chartTitles?.[id],
+        local.chartTitles?.[id],
+        remote.chartTitles?.[id],
+      );
+      return title === undefined ? [] : [[id, title]];
+    }),
+  );
   return validateSharedWorkspace(
-    { version: remote.version, spaces, removedCharts },
+    { version: Math.max(local.version, remote.version), spaces, removedCharts, chartTitles },
     known,
     local.activeId,
   );

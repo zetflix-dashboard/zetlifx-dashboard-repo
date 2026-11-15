@@ -30,8 +30,8 @@
         ><span class="brand-mark" aria-hidden="true">Z</span>Зетфликс
       </a>
       <nav class="page-switch" aria-label="Разделы проекта">
-        <a id="nav-charts" href="#charts" aria-controls="charts-page">Графики</a>
         <a id="nav-dashboard" href="#dashboard" aria-controls="dashboard-page">Дашборд</a>
+        <a id="nav-charts" href="#charts" aria-controls="charts-page">Графики</a>
       </nav>
       <div class="top-actions">
         <button
@@ -224,6 +224,17 @@
         <div class="dialog-actions">
           <button id="cancel-space" type="button">Отмена</button
           ><button class="primary" type="submit">Сохранить</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="chart-name-dialog" aria-labelledby="chart-name-title">
+      <form id="chart-name-form">
+        <h2 id="chart-name-title">Переименовать график</h2>
+        <label for="chart-display-title">Отображаемое название</label>
+        <input id="chart-display-title" required maxlength="160" />
+        <div class="dialog-actions">
+          <button id="cancel-chart-name" type="button">Отмена</button>
+          <button class="primary" type="submit">Сохранить</button>
         </div>
       </form>
     </dialog>

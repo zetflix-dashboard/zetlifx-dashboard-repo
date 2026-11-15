@@ -14,7 +14,7 @@ export function omitRemovedCharts(spaces, removedCharts) {
 export function validateWorkspace(raw, known) {
   if (
     !raw ||
-    ![2, 3].includes(raw.version) ||
+    ![2, 3, 4].includes(raw.version) ||
     !Array.isArray(raw.spaces) ||
     raw.spaces.length > MAX_SPACES
   )
@@ -27,6 +27,22 @@ export function validateWorkspace(raw, known) {
   )
     throw new Error('Некорректный список удалённых графиков');
   const removedCharts = [...new Set(removed)].sort();
+  const titles = raw.chartTitles === undefined ? {} : raw.chartTitles;
+  if (titles === null || typeof titles !== 'object' || Array.isArray(titles))
+    throw new Error('Некорректные названия графиков');
+  const titleEntries = Object.entries(titles).sort(([a], [b]) => a.localeCompare(b));
+  if (
+    titleEntries.length > 100 ||
+    titleEntries.some(
+      ([id, title]) =>
+        !/^C\d{2}$/.test(id) ||
+        typeof title !== 'string' ||
+        !title.trim() ||
+        title.trim().length > 160,
+    )
+  )
+    throw new Error('Название графика: от 1 до 160 символов');
+  const chartTitles = Object.fromEntries(titleEntries.map(([id, title]) => [id, title.trim()]));
   const ids = new Set();
   const spaces = omitRemovedCharts(raw.spaces, removedCharts).map((space) => {
     if (
@@ -48,10 +64,11 @@ export function validateWorkspace(raw, known) {
   if (spaces.length ? !ids.has(raw.activeId) : raw.activeId !== null)
     throw new Error('Активное пространство не найдено');
   return {
-    version: removedCharts.length ? 3 : raw.version,
+    version: Math.max(raw.version, titleEntries.length ? 4 : removedCharts.length ? 3 : 2),
     activeId: raw.activeId,
     spaces,
     ...(removedCharts.length ? { removedCharts } : {}),
+    ...(titleEntries.length ? { chartTitles } : {}),
   };
 }
 export function createWorkspace(charts, id = 'initial') {

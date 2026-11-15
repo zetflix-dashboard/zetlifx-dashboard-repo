@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { validateChart } from '../src/shared/charts/contract.js';
 const root = resolve('src/charts');
 const ids = new Set();
+const refs = new Set();
 for (const entry of readdirSync(root, { withFileTypes: true })) {
   if (entry.isFile() && entry.name === 'AGENTS.md') continue;
   if (!entry.isDirectory() || !/^C\d{2}-[a-z0-9][a-z0-9-]*$/.test(entry.name))
@@ -22,6 +23,9 @@ for (const entry of readdirSync(root, { withFileTypes: true })) {
   );
   if (!entry.name.startsWith(definition.id + '-') || ids.has(definition.id))
     throw new Error('Duplicate or mismatched C-ID');
+  const ref = entry.name.slice(definition.id.length + 1);
+  if (refs.has(ref)) throw new Error('Duplicate chart reference: ' + ref);
+  refs.add(ref);
   ids.add(definition.id);
 }
 console.log('Validated ' + ids.size + ' declarative charts');
