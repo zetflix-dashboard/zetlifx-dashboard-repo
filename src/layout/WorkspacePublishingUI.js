@@ -159,6 +159,12 @@ export function initWorkspacePublishing({
   }
 
   byId('publication-recheck').addEventListener('click', checkNow);
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !details.hidden) {
+      details.hidden = true;
+      progress.setAttribute('aria-expanded', 'false');
+    }
+  });
   byId('publish-workspace').addEventListener('click', () => {
     byId('publish-error').textContent = '';
     const { state } = draft();
@@ -226,7 +232,10 @@ export function initWorkspacePublishing({
       dialog.close();
     } catch (error) {
       byId('publish-error').textContent = readableError(error);
-      if (error instanceof LayoutConflict) onConflict();
+      if (error instanceof LayoutConflict) {
+        dialog.close();
+        onConflict();
+      }
       if (attempt?.number) {
         stage('error', 'Не удалось завершить публикацию', readableError(error), attempt.number, true);
       }
