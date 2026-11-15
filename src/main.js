@@ -547,16 +547,51 @@ byId('import-file').addEventListener('change', async (event) => {
     const state = Object.hasOwn(incoming, 'previousBlobSha')
       ? validatePublishedWorkspace(incoming, known)
       : validateWorkspace(incoming, known);
-    confirm(
-      'Импортировать пространства?',
-      'Текущие пространства будут заменены. Это действие можно отменить в настройке макета.',
-      () => {
+    const dialog = byId('import-dialog');
+    const select = byId('import-space-select');
+    const restoreError = byId('import-dialog-error');
+    restoreError.textContent = '';
+    select.replaceChildren();
+    for (const space of state.spaces) {
+      const option = document.createElement('option');
+      option.value = space.id;
+      option.textContent = space.title;
+      select.append(option);
+    }
+    byId('import-one').disabled = !state.spaces.length;
+    byId('import-cancel').onclick = () => dialog.close();
+    byId('import-replace').onclick = () => {
+      setEditing(true);
+      store.commit(state);
+      persist();
+      render();
+      dialog.close();
+    };
+    byId('import-one').onclick = () => {
+      try {
         setEditing(true);
-        store.commit(state);
+        const target = state.spaces.find((space) => space.id === select.value);
+        if (!target) throw new Error('Выберите пространство для переноса');
+        const next = store.current();
+        if (next.spaces.length >= 40) {
+          throw new Error('Достигнут предел в 40 пространств');
+        }
+        const newId = crypto.randomUUID();
+        next.spaces.push({
+          ...structuredClone(target),
+          id: newId,
+          title: target.title.slice(0, 71) + ' (копия)',
+        });
+        next.activeId = newId;
+        store.commit(next);
         persist();
         render();
-      },
-    );
+        dialog.close();
+      } catch (error) {
+        restoreError.textContent = error.message;
+      }
+    };
+    dialog.showModal();
   } catch (error) {
     message('Ошибка импорта: ' + error.message);
   } finally {
