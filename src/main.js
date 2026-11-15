@@ -248,14 +248,22 @@ function setEditing(value) {
     render();
     byId('edit-btn').focus();
   }
-  byId('save-state').textContent = showCommon ? 'Общий макет' : (saved ? 'Сохранено в браузере' : 'Мой макет');
+  byId('save-state').textContent = showCommon
+    ? 'Общий макет'
+    : saved
+      ? 'Сохранено в браузере'
+      : 'Мой макет';
 }
 byId('edit-btn').addEventListener('click', () => setEditing(true));
 byId('save-draft').addEventListener('click', () => setEditing(false));
 byId('workspace-view').addEventListener('change', (event) => {
   showCommon = event.target.checked;
   store = showCommon ? commonStore : (draftStore ?? commonStore);
-  byId('save-state').textContent = showCommon ? 'Общий макет' : (saved ? 'Сохранено в браузере' : 'Мой макет');
+  byId('save-state').textContent = showCommon
+    ? 'Общий макет'
+    : saved
+      ? 'Сохранено в браузере'
+      : 'Мой макет';
   render();
 });
 const recoveryDialog = byId('recovery-dialog');
@@ -282,7 +290,9 @@ function openRecovery() {
     spaces.append(label);
   }
   apply.disabled = !needsReload && !spaces.querySelector('input:checked');
-  spaces.onchange = () => { apply.disabled = !spaces.querySelector('input:checked'); };
+  spaces.onchange = () => {
+    apply.disabled = !spaces.querySelector('input:checked');
+  };
   recoveryDialog.showModal();
 }
 byId('recovery-cancel').addEventListener('click', () => recoveryDialog.close());
@@ -293,7 +303,9 @@ byId('recovery-apply').addEventListener('click', () => {
     if (saved) window.location.reload();
     return;
   }
-  const ids = [...byId('recovery-spaces').querySelectorAll('input:checked')].map((item) => item.value);
+  const ids = [...byId('recovery-spaces').querySelectorAll('input:checked')].map(
+    (item) => item.value,
+  );
   if (!ids.length) return;
   try {
     const next = recoverSelectedSpaces(published, draftStore.current(), ids);
@@ -304,7 +316,9 @@ byId('recovery-apply').addEventListener('click', () => {
     store = draftStore;
     persist();
     render();
-    message('Выбранные пространства перенесены в актуальный макет. Проверьте расположение графиков перед публикацией.');
+    message(
+      'Выбранные пространства перенесены в актуальный макет. Проверьте расположение графиков перед публикацией.',
+    );
     recoveryDialog.close();
   } catch (error) {
     byId('recovery-error').textContent = error.message;

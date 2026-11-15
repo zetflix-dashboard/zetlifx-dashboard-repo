@@ -40,7 +40,12 @@
         <span class="workspace-option workspace-common">Общий макет</span>
       </label>
       <div class="top-actions">
-        <span id="save-state" role="status" aria-live="polite" title="Личный макет хранится только в этом браузере"></span
+        <span
+          id="save-state"
+          role="status"
+          aria-live="polite"
+          title="Личный макет хранится только в этом браузере"
+        ></span
         ><button
           id="theme-toggle"
           class="theme-toggle"
@@ -53,7 +58,15 @@
           aria-label="Перезагрузить все графики"
           title="Перезагрузить все графики"
         ></button
-        ><button id="publication-progress" type="button" hidden aria-controls="publication-details" aria-expanded="false">Статус публикации</button>
+        ><button
+          id="publication-progress"
+          type="button"
+          hidden
+          aria-controls="publication-details"
+          aria-expanded="false"
+        >
+          Статус публикации
+        </button>
         <button id="edit-btn" type="button">Настроить</button>
         <button id="save-draft" type="button" hidden>Сохранить для себя</button>
         <button id="publish-workspace" class="primary" type="button" hidden>
@@ -154,10 +167,17 @@
       <p id="message" class="message" role="status" aria-live="polite" hidden></p>
       <aside id="publication-toast" class="publication-toast" hidden>
         <span id="publication-status" role="status"></span>
-        <a id="publication-link" target="_blank" rel="noopener noreferrer" hidden>Технические детали</a>
+        <a id="publication-link" target="_blank" rel="noopener noreferrer" hidden
+          >Технические детали</a
+        >
         <button id="dismiss-publication" type="button" aria-label="Закрыть уведомление">×</button>
       </aside>
-      <section id="publication-details" class="publication-details" hidden aria-label="Состояние публикации">
+      <section
+        id="publication-details"
+        class="publication-details"
+        hidden
+        aria-label="Состояние публикации"
+      >
         <strong id="publication-details-title">Публикация изменений</strong>
         <ol id="publication-steps">
           <li>Отправка изменений</li>
@@ -165,9 +185,13 @@
           <li>Обновление сайта</li>
           <li>Доступно команде</li>
         </ol>
-        <p id="publication-explanation">Здесь можно отслеживать публикацию даже после закрытия уведомления.</p>
+        <p id="publication-explanation">
+          Здесь можно отслеживать публикацию даже после закрытия уведомления.
+        </p>
         <button id="publication-recheck" type="button">Проверить статус</button>
-        <a id="publication-details-link" target="_blank" rel="noopener noreferrer" hidden>Технические детали</a>
+        <a id="publication-details-link" target="_blank" rel="noopener noreferrer" hidden
+          >Технические детали</a
+        >
       </section>
       <section id="workspace-panel" role="tabpanel" tabindex="0">
         <div id="dashboard-grid" class="grid-stack"></div>
@@ -190,7 +214,8 @@
         </div>
         <h2 id="publish-title">Опубликовать для всех</h2>
         <p>
-          Для публикации нужен доступ к командному репозиторию. Данные для входа можно сохранить в менеджере паролей браузера.
+          Для публикации нужен доступ к командному репозиторию. Данные для входа можно сохранить в
+          менеджере паролей браузера.
         </p>
         <details class="token-help">
           <summary>Как получить токен</summary>
@@ -244,7 +269,10 @@
     </dialog>
     <dialog id="recovery-dialog" aria-labelledby="recovery-title">
       <h2 id="recovery-title">Общий макет изменился</h2>
-      <p>Ваш черновик сохранён. Выберите пространства, которые хотите перенести в актуальную версию. При совпадении названий выбранное пространство заменит общую версию.</p>
+      <p>
+        Ваш черновик сохранён. Выберите пространства, которые хотите перенести в актуальную версию.
+        При совпадении названий выбранное пространство заменит общую версию.
+      </p>
       <div id="recovery-spaces"></div>
       <p id="recovery-error" role="alert"></p>
       <div class="dialog-actions">

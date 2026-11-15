@@ -1,9 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { recoverSelectedSpaces, summarizeWorkspaceChanges } from '../src/layout/WorkspaceChanges.js';
+import {
+  recoverSelectedSpaces,
+  summarizeWorkspaceChanges,
+} from '../src/layout/WorkspaceChanges.js';
 
 const widget = (instanceId, x = 0) => ({
-  instanceId, chartId: 'C03', x, y: 0, w: 6, h: 4,
+  instanceId,
+  chartId: 'C03',
+  x,
+  y: 0,
+  w: 6,
+  h: 4,
 });
 const space = (id, widgets) => ({ id, title: id, widgets });
 
@@ -11,10 +19,7 @@ test('workspace comparison counts changed spaces, instances and geometry', () =>
   const before = { spaces: [space('a', [widget('one'), widget('two')])] };
   const after = {
     spaces: [
-      space('a', [
-        { ...widget('one', 3), w: 7, localFilters: { quarter: '1' } },
-        widget('three'),
-      ]),
+      space('a', [{ ...widget('one', 3), w: 7, localFilters: { quarter: '1' } }, widget('three')]),
       space('b', [widget('four')]),
     ],
   };
@@ -40,7 +45,10 @@ test('recovery replaces only selected spaces and preserves common changes', () =
     spaces: [space('a', [widget('personal')]), space('c', [widget('additional')])],
   };
   const recovered = recoverSelectedSpaces(published, draft, ['a', 'c']);
-  assert.deepEqual(recovered.spaces.map((s) => s.id), ['a', 'b', 'c']);
+  assert.deepEqual(
+    recovered.spaces.map((s) => s.id),
+    ['a', 'b', 'c'],
+  );
   assert.equal(recovered.spaces[0].widgets[0].instanceId, 'personal');
   assert.equal(recovered.spaces[1].widgets[0].instanceId, 'shared');
   draft.spaces[0].widgets[0].x = 9;

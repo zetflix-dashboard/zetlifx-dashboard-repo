@@ -34,8 +34,10 @@ export function summarizeWorkspaceChanges(before, after) {
         if (oldWidget.w !== nextWidget.w || oldWidget.h !== nextWidget.h) result.resized++;
         if (
           oldWidget.title !== nextWidget.title ||
-          JSON.stringify(oldWidget.localFilters || {}) !== JSON.stringify(nextWidget.localFilters || {})
-        ) result.updated++;
+          JSON.stringify(oldWidget.localFilters || {}) !==
+            JSON.stringify(nextWidget.localFilters || {})
+        )
+          result.updated++;
       }
     }
   }
