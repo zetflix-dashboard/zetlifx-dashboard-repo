@@ -3,6 +3,25 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 
+function publishedWorkspaceVersion() {
+  return {
+    name: 'zetflix-published-workspace-version',
+    apply: 'build',
+    generateBundle() {
+      const content = readFileSync(resolve('src/layout/workspace.json'));
+      const sha = createHash('sha1')
+        .update('blob ' + content.length + '\\0')
+        .update(content)
+        .digest('hex');
+      this.emitFile({
+        type: 'asset',
+        fileName: 'workspace-version.json',
+        source: JSON.stringify({ sha }) + '\\n',
+      });
+    },
+  };
+}
+
 function parquetVersions() {
   const moduleId = '\0zetflix-parquet-versions';
   const root = resolve('public/data');
@@ -24,7 +43,7 @@ function parquetVersions() {
 }
 
 export default defineConfig(({ mode }) => ({
-  plugins: [parquetVersions()],
+  plugins: [parquetVersions(), publishedWorkspaceVersion()],
   resolve: {
     alias: [
       {
