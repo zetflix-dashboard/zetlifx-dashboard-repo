@@ -112,9 +112,20 @@ export class ChartManager {
           });
           controls.append(button);
         }
+        const stageLabels = document.createElement('div');
+        stageLabels.className = 'sankey-stage-labels';
+        const sourceTitle = document.createElement('span');
+        sourceTitle.textContent =
+          session.definition.sourceTitle ||
+          datasets[session.definition.dataset].fields[session.definition.dimension].label;
+        const targetTitle = document.createElement('span');
+        targetTitle.textContent =
+          session.definition.targetTitle ||
+          datasets[session.definition.dataset].fields[session.definition.target].label;
+        stageLabels.append(sourceTitle, targetTitle);
         plot = document.createElement('div');
         plot.className = 'sankey-plot';
-        session.node.append(controls, plot);
+        session.node.append(controls, stageLabels, plot);
       }
       session.chart = echarts.init(plot, null, { renderer: 'canvas' });
       session.chart.setOption(
