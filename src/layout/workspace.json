@@ -1,13 +1,58 @@
 {
   "version": 2,
-  "previousBlobSha": null,
+  "previousBlobSha": "d0905e00532760231c82c9ef9e57a33a63cf2aaa",
   "spaces": [
     {
-      "id": "initial",
-      "title": "Мой дашборд",
+      "id": "imported",
+      "title": "Общий обзор",
       "widgets": [
-        { "instanceId": "c03-initial", "chartId": "C03", "x": 0, "y": 0, "w": 6, "h": 5 },
-        { "instanceId": "c18-initial", "chartId": "C18", "x": 6, "y": 0, "w": 6, "h": 5 }
+        {
+          "instanceId": "advertising",
+          "chartId": "C18",
+          "x": 0,
+          "y": 0,
+          "w": 6,
+          "h": 6
+        },
+        {
+          "instanceId": "revenue",
+          "chartId": "C03",
+          "localFilters": {
+            "quarter": "3"
+          },
+          "x": 6,
+          "y": 0,
+          "w": 6,
+          "h": 6
+        },
+        {
+          "type": "heading",
+          "instanceId": "38682dff-7794-4097-b213-2cbcf9e8ba8d",
+          "title": "Пример заголовка",
+          "x": 0,
+          "y": 6,
+          "w": 12,
+          "h": 1
+        },
+        {
+          "instanceId": "f31cf7f5-7473-4b33-a9c1-bade3c6be23b",
+          "chartId": "C20",
+          "x": 0,
+          "y": 7,
+          "w": 12,
+          "h": 6
+        },
+        {
+          "instanceId": "6c4a7286-edd0-492c-adef-52886fd497ec",
+          "chartId": "C15",
+          "localFilters": {
+            "access": "Пробный период"
+          },
+          "x": 0,
+          "y": 13,
+          "w": 8,
+          "h": 1
+        }
       ]
     }
   ]
