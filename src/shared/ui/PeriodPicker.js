@@ -81,7 +81,7 @@ export function initPeriodPicker(root, filters, onError = () => {}) {
   }
   function positionPanel() {
     if (panel.hidden) return;
-    const start = root.getBoundingClientRect().left;
+    const start = trigger.getBoundingClientRect().left;
     const rightmostStart = document.documentElement.clientWidth - panel.offsetWidth - 12;
     panel.style.left = Math.max(12, Math.min(start, rightmostStart)) - start + 'px';
   }
