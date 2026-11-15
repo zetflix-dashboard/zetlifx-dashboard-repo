@@ -656,3 +656,22 @@ test('personal layout labels and publication preview explain intended team chang
   await page.locator('#save-draft').click();
   await expect(page.locator('#save-state')).toContainText('Сохранено в этом браузере');
 });
+
+test('restoring a single workspace preserves the existing personal spaces', async ({ page }) => {
+  await ready(page);
+  const imported = {
+    version: 2,
+    activeId: 'recovered',
+    spaces: [{ id: 'recovered', title: 'Восстановленный', widgets: [] }],
+  };
+  await page.locator('#import-file').setInputFiles({
+    name: 'layout-backup.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(imported)),
+  });
+  await expect(page.locator('#import-dialog')).toBeVisible();
+  await page.locator('#import-one').click();
+  await expect(page.locator('#import-dialog')).toBeHidden();
+  await expect(page.getByRole('tab', { name: /Восстановленный/ })).toBeVisible();
+  await expect(page.getByRole('tab', { name: /Мой дашборд/ })).toBeVisible();
+});
