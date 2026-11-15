@@ -1,4 +1,6 @@
 import { datasets } from '../data/datasets.js';
+import { isNumeric, tableFields } from './contract.js';
+import { treeOption, waterfallOption, funnelOption, heatmapOption } from './specializedOptions.js';
 import { formatValue } from '../ui/format.js';
 export const PALETTE = Object.freeze([
   '#407bd0',
@@ -26,8 +28,36 @@ export function chartTheme() {
   };
 }
 
+const specializedOptions = {
+  tree: treeOption,
+  waterfall: waterfallOption,
+  funnel: funnelOption,
+  heatmap: heatmapOption,
+};
+
 export function buildOption(definition, rows, reducedMotion = false, theme = chartTheme()) {
   const fields = datasets[definition.dataset].fields;
+  const specializedOption = specializedOptions[definition.template];
+  if (specializedOption) {
+    const { tooltip, ...option } = specializedOption(definition, rows, fields, theme);
+    return {
+      backgroundColor: 'transparent',
+      color: theme.palette,
+      animation: !reducedMotion,
+      aria: { enabled: true, description: definition.question, decal: { show: true } },
+      textStyle: { color: theme.text, fontFamily: 'Inter, system-ui, sans-serif', fontSize: 12 },
+      tooltip: {
+        trigger: 'item',
+        renderMode: 'richText',
+        confine: true,
+        backgroundColor: theme.tooltip,
+        borderColor: theme.border,
+        textStyle: { color: theme.tooltipText },
+        ...tooltip,
+      },
+      ...option,
+    };
+  }
   const units = [...new Set(definition.series.map((s) => fields[s.field].unit))];
   const scatter = definition.template === 'scatter';
   if (definition.template === 'pie') {
@@ -156,35 +186,60 @@ export function buildOption(definition, rows, reducedMotion = false, theme = cha
     }),
   };
 }
-export function renderTable(container, definition, rows) {
+const collator = new Intl.Collator('ru', { numeric: true });
+
+function compareCells(a, b, unit, direction) {
+  const missingA = a == null || a === '';
+  const missingB = b == null || b === '';
+  if (missingA || missingB) return Number(missingA) - Number(missingB);
+  const order = isNumeric(unit) ? Number(a) - Number(b) : collator.compare(a, b);
+  return direction === 'ascending' ? order : -order;
+}
+
+export function renderTable(container, definition, rows, sort = {}) {
   const fields = datasets[definition.dataset].fields;
-  const columns = definition.columns || [
-    definition.dimension,
-    ...definition.series.map((s) => s.field),
-  ];
+  const columns = tableFields(definition);
   const table = document.createElement('table');
   table.className = 'data-table';
   const caption = table.createCaption();
   caption.textContent = definition.title;
   caption.className = 'sr-only';
   const header = table.createTHead().insertRow();
+  const headings = new Map();
   for (const field of columns) {
     const th = document.createElement('th');
     th.scope = 'col';
-    th.textContent = fields[field].label;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'table-sort';
+    const label = document.createElement('span');
+    label.textContent = fields[field].label;
+    const indicator = document.createElement('span');
+    indicator.className = 'table-sort-indicator';
+    indicator.setAttribute('aria-hidden', 'true');
+    button.append(label, indicator);
+    button.addEventListener('click', () => {
+      sort.direction =
+        sort.field === field && sort.direction === 'ascending' ? 'descending' : 'ascending';
+      sort.field = field;
+      applySort();
+    });
+    th.append(button);
     header.append(th);
+    headings.set(field, th);
   }
+
   const bars = definition.columnBars || [];
   const maxima = new Map(
     bars.map((field) => [field, Math.max(0, ...rows.map((row) => Number(row[field]) || 0))]),
   );
   const body = table.createTBody();
-  for (const row of rows) {
+  const entries = rows.map((row) => {
     const tr = body.insertRow();
     for (const field of columns) {
       const cell = tr.insertCell();
       cell.textContent = formatValue(row[field], fields[field].unit);
-      if (!['month', 'text'].includes(fields[field].unit)) cell.className = 'numeric';
+      if (isNumeric(fields[field].unit)) cell.className = 'numeric';
       if (bars.includes(field)) {
         const max = maxima.get(field);
         const value = Number(row[field]);
@@ -195,7 +250,8 @@ export function renderTable(container, definition, rows) {
         cell.style.setProperty('--bar-width', width + '%');
       }
     }
-  }
+    return { row, tr };
+  });
   if (definition.totals?.length && rows.length) {
     const footer = table.createTFoot().insertRow();
     footer.className = 'data-table-totals';
@@ -216,5 +272,18 @@ export function renderTable(container, definition, rows) {
       }
     }
   }
+
+  function applySort() {
+    const { field, direction } = sort;
+    for (const [key, heading] of headings) {
+      if (key === field) heading.setAttribute('aria-sort', direction);
+      else heading.removeAttribute('aria-sort');
+    }
+    const sorted = [...entries].sort((a, b) =>
+      compareCells(a.row[field], b.row[field], fields[field].unit, direction),
+    );
+    body.replaceChildren(...sorted.map(({ tr }) => tr));
+  }
+  if (headings.has(sort.field)) applySort();
   container.replaceChildren(table);
 }

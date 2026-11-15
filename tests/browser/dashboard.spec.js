@@ -356,7 +356,9 @@ test('local filters are isolated by widget and saved with the workspace', async 
   await expect(cards.locator('.widget-filter-select')).toHaveValue('Драма');
 });
 
-test('RFM table is compact, includes only three metric bars and a totals row', async ({ page }) => {
+test('RFM sorts raw values and keeps compact bars and totals in the scroll flow', async ({
+  page,
+}) => {
   test.setTimeout(180000);
   await ready(page);
   await page.locator('#edit-btn').click();
@@ -371,6 +373,40 @@ test('RFM table is compact, includes only three metric bars and a totals row', a
   await expect(table.locator('tfoot tr')).toContainText('100%');
   await expect(table.locator('thead th').first()).toHaveCSS('position', 'sticky');
   await expect(card).toHaveAttribute('gs-w', '12');
+
+  const headers = table.locator('thead th');
+  await expect(headers.getByRole('button')).toHaveCount(9);
+  const users = headers.filter({ hasText: /^Пользователи$/ });
+  await users.getByRole('button').click();
+  await expect(users).toHaveAttribute('aria-sort', 'ascending');
+  const counts = async () =>
+    (await table.locator('tbody tr td:nth-child(2)').allTextContents()).map((value) =>
+      Number(value.replace(/\s/g, '')),
+    );
+  const ascending = await counts();
+  expect(ascending).toEqual([...ascending].sort((a, b) => a - b));
+  expect(ascending[0]).toBeLessThan(ascending.at(-1));
+  await users.getByRole('button').press('Enter');
+  await expect(users).toHaveAttribute('aria-sort', 'descending');
+  expect(await counts()).toEqual(ascending.reverse());
+  await headers.first().getByRole('button').click();
+  await expect(headers.first()).toHaveAttribute('aria-sort', 'ascending');
+  await expect(users).not.toHaveAttribute('aria-sort');
+  await expect(table.locator('tfoot tr')).toContainText('Итого');
+
+  const maxBar = table.locator('.cell-bar[style="--bar-width: 100%;"]').first();
+  await expect(maxBar).toHaveCSS('height', '24px');
+  await expect(maxBar).toHaveCSS('background-size', 'calc(100% - 10px) calc(100% - 8px)');
+  const scroll = card.locator('.table-view');
+  await scroll.evaluate((element) => {
+    element.style.maxHeight = '240px';
+    element.scrollTop = 0;
+  });
+  await expect(table.locator('tfoot tr')).not.toBeInViewport();
+  await scroll.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await expect(table.locator('tfoot tr')).toBeInViewport();
 });
 
 test('C03 quarter is a per-card filter and the system renders a subtle inline C-ID', async ({

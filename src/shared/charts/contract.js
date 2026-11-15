@@ -1,6 +1,20 @@
 import { datasets } from '../data/datasets.js';
 import { availableLocalFilters } from '../filters/LocalFilters.js';
-export const TEMPLATES = Object.freeze(['line', 'bar', 'combo', 'scatter', 'pie', 'table']);
+export const TEMPLATES = Object.freeze([
+  'line',
+  'bar',
+  'combo',
+  'scatter',
+  'pie',
+  'table',
+  'tree',
+  'waterfall',
+  'funnel',
+  'heatmap',
+]);
+const extraFields = { tree: 'parent', waterfall: 'stepType', heatmap: 'category' };
+const singleSeries = ['pie', 'tree', 'waterfall', 'funnel', 'heatmap'];
+export const isNumeric = (unit) => !['month', 'text'].includes(unit);
 const text = (s, max = 160) => typeof s === 'string' && s.trim().length > 0 && s.length <= max;
 function keys(object, allowed) {
   if (
@@ -25,6 +39,7 @@ export function validateChart(raw, catalog = datasets) {
     'pointLabel',
     'localFilters',
     'totals',
+    ...Object.values(extraFields),
   ]);
   if (!/^C\d{2}$/.test(raw.id) || !text(raw.title, 90) || !text(raw.question, 300))
     throw new Error('Нужны C-ID, заголовок и вопрос');
@@ -45,8 +60,17 @@ export function validateChart(raw, catalog = datasets) {
     throw new Error('Некорректные локальные фильтры');
   availableLocalFilters(raw, catalog);
   const validField = (f) => typeof f === 'string' && Object.hasOwn(fields, f);
+  const extra = extraFields[raw.template];
+  if (
+    Object.values(extraFields).some((field) => field !== extra && raw[field] !== undefined) ||
+    (extra && !validField(raw[extra])) ||
+    ((raw.template === 'tree' || raw.template === 'waterfall') &&
+      fields[raw[extra]].unit !== 'text')
+  )
+    throw new Error('Некорректные поля шаблона');
   if (raw.template === 'table') {
     if (
+      raw.pointLabel !== undefined ||
       raw.dimension !== undefined ||
       raw.series !== undefined ||
       !Array.isArray(raw.columns) ||
@@ -55,7 +79,7 @@ export function validateChart(raw, catalog = datasets) {
           new Set(raw.totals).size !== raw.totals.length ||
           raw.totals.some(
             (field) =>
-              !raw.columns.includes(field) || ['month', 'text'].includes(fields[field].unit),
+              !validField(field) || !raw.columns.includes(field) || !isNumeric(fields[field].unit),
           ))) ||
       !raw.columns.length ||
       raw.columns.length > 12 ||
@@ -66,7 +90,7 @@ export function validateChart(raw, catalog = datasets) {
           new Set(raw.columnBars).size !== raw.columnBars.length ||
           raw.columnBars.some(
             (field) =>
-              !raw.columns.includes(field) || ['month', 'text'].includes(fields[field].unit),
+              !validField(field) || !raw.columns.includes(field) || !isNumeric(fields[field].unit),
           )))
     )
       throw new Error('Некорректные столбцы таблицы');
@@ -76,7 +100,7 @@ export function validateChart(raw, catalog = datasets) {
       raw.totals !== undefined ||
       raw.columnBars !== undefined ||
       (raw.pointLabel !== undefined &&
-        (raw.template !== 'scatter' ||
+        (!['scatter', 'tree'].includes(raw.template) ||
           !validField(raw.pointLabel) ||
           fields[raw.pointLabel].unit !== 'text')) ||
       !validField(raw.dimension) ||
@@ -90,7 +114,7 @@ export function validateChart(raw, catalog = datasets) {
       keys(series, ['field', 'type']);
       if (
         !validField(series.field) ||
-        ['month', 'text'].includes(fields[series.field].unit) ||
+        !isNumeric(fields[series.field].unit) ||
         seen.has(series.field)
       )
         throw new Error('Нужна уникальная числовая серия');
@@ -104,34 +128,100 @@ export function validateChart(raw, catalog = datasets) {
     }
     if (new Set(raw.series.map((s) => fields[s.field].unit)).size > 2)
       throw new Error('Допускаются максимум две единицы измерения');
+    if (singleSeries.includes(raw.template) && raw.series.length !== 1)
+      throw new Error('Шаблон требует одну числовую серию');
     if (
-      raw.template === 'pie' &&
-      (fields[raw.dimension].unit !== 'text' || raw.series.length !== 1)
+      ['pie', 'tree', 'waterfall', 'funnel'].includes(raw.template) &&
+      fields[raw.dimension].unit !== 'text'
     )
-      throw new Error('Круговая диаграмма требует категории и одну числовую серию');
-    if (raw.template === 'scatter' && ['month', 'text'].includes(fields[raw.dimension].unit))
+      throw new Error('Шаблон требует текстовую категорию');
+    if (raw.template === 'scatter' && !isNumeric(fields[raw.dimension].unit))
       throw new Error('Точечная диаграмма требует числовую ось X');
+    if (extra && new Set([raw.dimension, raw[extra], raw.series[0].field]).size !== 3)
+      throw new Error('Шаблон требует разные поля категорий и показателя');
   }
   return structuredClone(raw);
 }
+export function tableFields(definition) {
+  if (definition.template === 'table') return definition.columns;
+  return [
+    ...new Set(
+      [
+        definition.dimension,
+        definition[extraFields[definition.template]],
+        definition.pointLabel,
+        ...definition.series.map((s) => s.field),
+      ].filter(Boolean),
+    ),
+  ];
+}
+
+function validateStructure(rows, definition, fields) {
+  const { template, dimension, parent, category, stepType } = definition;
+  if (!['tree', 'waterfall', 'funnel', 'heatmap'].includes(template) || !rows.length) return;
+
+  const metric = definition.series[0].field;
+  const categoryValue = (value, field) =>
+    isNumeric(fields[field].unit) ? Number(value) : String(value);
+  const dimensions = template === 'heatmap' ? [dimension, category] : [dimension];
+  const seen = new Set();
+  for (const row of rows) {
+    if (dimensions.some((field) => row[field] == null || row[field] === ''))
+      throw new Error('В результате отсутствует категория');
+    const key = JSON.stringify(dimensions.map((field) => categoryValue(row[field], field)));
+    if (seen.has(key)) throw new Error('Категории графика должны быть уникальны');
+    seen.add(key);
+  }
+
+  if (template === 'tree') {
+    if (rows.length > 200) throw new Error('Дерево поддерживает до 200 узлов');
+    const nodes = new Set(rows.map((row) => String(row[dimension])));
+    const roots = rows.filter((row) => row[parent] === null);
+    if (roots.length !== 1) throw new Error('Дерево требует ровно один корень с NULL родителем');
+    const children = new Map();
+    for (const row of rows) {
+      if (row[parent] === null) continue;
+      const id = String(row[parent]);
+      if (!nodes.has(id)) throw new Error('Узел дерева ссылается на неизвестного родителя');
+      if (!children.has(id)) children.set(id, []);
+      children.get(id).push(String(row[dimension]));
+    }
+    const queue = [String(roots[0][dimension])];
+    for (const id of queue) {
+      for (const child of children.get(id) || []) queue.push(child);
+    }
+    if (queue.length !== nodes.size) throw new Error('Дерево содержит цикл');
+  }
+  if (
+    template === 'waterfall' &&
+    (rows.length < 2 ||
+      rows[0][stepType] !== 'total' ||
+      rows.at(-1)[stepType] !== 'total' ||
+      rows.some(
+        (row) =>
+          !['total', 'delta'].includes(row[stepType]) || row[metric] == null || row[metric] === '',
+      ))
+  )
+    throw new Error('Мост требует начальный и конечный итог, шаги total/delta и числовые суммы');
+  if (
+    template === 'funnel' &&
+    rows.some((row) => row[metric] == null || row[metric] === '' || Number(row[metric]) < 0)
+  )
+    throw new Error('Воронка требует неотрицательные значения всех этапов');
+}
+
 export function validateRows(rows, definition, catalog = datasets) {
   if (!Array.isArray(rows) || rows.length > 5000)
     throw new Error('Нужно агрегировать данные: лимит 5000 строк');
-  const fields =
-    definition.template === 'table'
-      ? definition.columns
-      : [
-          definition.dimension,
-          ...definition.series.map((s) => s.field),
-          ...(definition.pointLabel ? [definition.pointLabel] : []),
-        ];
+  const columns = tableFields(definition);
+  const fields = catalog[definition.dataset].fields;
   for (const row of rows)
-    for (const field of fields) {
+    for (const field of columns) {
       if (!Object.hasOwn(row, field)) throw new Error('В результате отсутствует поле ' + field);
       const value = row[field];
-      const unit = catalog[definition.dataset].fields[field].unit;
-      if (value !== null && !['month', 'text'].includes(unit) && !Number.isFinite(Number(value)))
+      if (value !== null && isNumeric(fields[field].unit) && !Number.isFinite(Number(value)))
         throw new Error('Некорректное число в ' + field);
     }
+  validateStructure(rows, definition, fields);
   return rows;
 }

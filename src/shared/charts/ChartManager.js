@@ -1,10 +1,20 @@
 import * as echarts from 'echarts/core';
-import { LineChart, BarChart, ScatterChart, PieChart } from 'echarts/charts';
+import {
+  LineChart,
+  BarChart,
+  ScatterChart,
+  PieChart,
+  TreeChart,
+  CustomChart,
+  FunnelChart,
+  HeatmapChart,
+} from 'echarts/charts';
 import {
   GridComponent,
   TooltipComponent,
   LegendComponent,
   AriaComponent,
+  VisualMapComponent,
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { ChartRegistry } from './ChartRegistry.js';
@@ -17,10 +27,15 @@ echarts.use([
   BarChart,
   ScatterChart,
   PieChart,
+  TreeChart,
+  CustomChart,
+  FunnelChart,
+  HeatmapChart,
   GridComponent,
   TooltipComponent,
   LegendComponent,
   AriaComponent,
+  VisualMapComponent,
   CanvasRenderer,
 ]);
 export class ChartManager {
@@ -46,6 +61,7 @@ export class ChartManager {
       overlay,
       chart: null,
       request: 0,
+      tableSort: {},
       table: definition.template === 'table',
     };
     session.observer = new ResizeObserver(() => session.chart?.resize());
@@ -58,7 +74,8 @@ export class ChartManager {
     session.chart = null;
     session.node.replaceChildren();
     session.node.classList.toggle('table-view', session.table);
-    if (session.table) renderTable(session.node, session.definition, session.rows);
+    if (session.table)
+      renderTable(session.node, session.definition, session.rows, session.tableSort);
     else {
       session.chart = echarts.init(session.node, null, { renderer: 'canvas' });
       session.chart.setOption(
