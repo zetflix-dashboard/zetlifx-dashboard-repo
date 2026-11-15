@@ -68,7 +68,7 @@ let naming = 'create';
 let headingEditingId = null;
 let confirmAction;
 let saveTimer;
-let saved = false;
+let saved = Boolean(storage);
 const saveStatus = byId('save-state');
 function statusSaved(text) { saveStatus.textContent = text; }
 function draftDiff(baseState, candidate) {
