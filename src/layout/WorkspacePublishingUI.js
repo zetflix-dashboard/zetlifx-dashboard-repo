@@ -9,7 +9,14 @@ export function initWorkspacePublishing({ storage, publishedSha, draft, markSubm
   const form = byId('publish-form');
   const tokenInput = byId('github-token');
   const userInput = byId('github-login');
+  const toast = byId('publication-toast');
   const status = byId('publication-status');
+  let lastNotice;
+  let toastTimer;
+  byId('dismiss-publication').addEventListener('click', () => {
+    clearTimeout(toastTimer);
+    toast.hidden = true;
+  });
   const link = byId('publication-link');
   const submit = byId('confirm-publish');
   let busy = false;
@@ -29,12 +36,21 @@ export function initWorkspacePublishing({ storage, publishedSha, draft, markSubm
     }
   }
   function show(text, number) {
+    const key = JSON.stringify([text, number]);
+    if (key === lastNotice) return;
+    lastNotice = key;
+    clearTimeout(toastTimer);
+    toast.hidden = false;
     status.textContent = text;
+    toastTimer = setTimeout(() => {
+      toast.hidden = true;
+    }, 12000);
     link.hidden = !Number.isSafeInteger(number) || number < 1;
     if (!link.hidden) link.href = 'https://github.com/' + REPOSITORY + '/pull/' + number;
   }
+  let refreshing = false;
   async function refresh() {
-    if (busy || !attempt?.number) return;
+    if (busy || refreshing || !attempt?.number) return;
     const current = attempt;
     if (current.blob === publishedSha) {
       show('Макет доступен на Pages', current.number);
@@ -44,6 +60,7 @@ export function initWorkspacePublishing({ storage, publishedSha, draft, markSubm
       show('В main · обновите страницу после деплоя Pages', current.number);
       return;
     }
+    refreshing = true;
     try {
       const pr = await new GitHubPublisher().status(current.number);
       if (busy || attempt !== current) return;
@@ -61,6 +78,8 @@ export function initWorkspacePublishing({ storage, publishedSha, draft, markSubm
       }
     } catch {
       if (!busy && attempt === current) show('Статус в GitHub', current.number);
+    } finally {
+      refreshing = false;
     }
   }
   byId('publish-workspace').addEventListener('click', () => {
@@ -72,7 +91,7 @@ export function initWorkspacePublishing({ storage, publishedSha, draft, markSubm
         .get({ password: true, mediation: 'optional' })
         .then((saved) => {
           if (!dialog.open || !saved || tokenInput.value || userInput.value) return;
-          userInput.value = saved.id;
+          userInput.value = '@' + saved.id.replace(/^@/, '');
           tokenInput.value = saved.password;
         })
         .catch(() => {});
@@ -87,7 +106,13 @@ export function initWorkspacePublishing({ storage, publishedSha, draft, markSubm
     event.preventDefault();
     if (busy) return;
     const token = tokenInput.value.trim();
-    const login = userInput.value.trim();
+    const login = userInput.value.trim().replace(/^@/, '');
+    if (!/^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/i.test(login)) {
+      byId('publish-error').textContent = 'Введите имя аккаунта в формате @username.';
+      userInput.focus();
+      return;
+    }
+    userInput.value = '@' + login;
     busy = true;
     submit.disabled = true;
     byId('cancel-publish').disabled = true;
@@ -112,7 +137,7 @@ export function initWorkspacePublishing({ storage, publishedSha, draft, markSubm
         void navigator.credentials
           .store(
             new PasswordCredential({
-              id: login,
+              id: '@' + login,
               password: token,
               name: 'Публикация макета Зетфликс',
             }),
@@ -140,6 +165,6 @@ export function initWorkspacePublishing({ storage, publishedSha, draft, markSubm
   window.addEventListener('focus', refresh);
   window.setInterval(() => {
     if (document.visibilityState === 'visible' && attempt?.blob !== publishedSha) void refresh();
-  }, 60000);
+  }, 15000);
   void refresh();
 }
