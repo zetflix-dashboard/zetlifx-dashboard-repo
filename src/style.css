@@ -1102,7 +1102,7 @@ dialog label {
 }
 
 .workspace-switch:has(#workspace-view:checked)::before {
-  transform: translateX(100%);
+  transform: translateX(calc(100% + 4px));
 }
 
 .workspace-switch:not(:has(#workspace-view:checked)) .workspace-local,
