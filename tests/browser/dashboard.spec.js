@@ -81,14 +81,6 @@ test('mobile uses full width and saves canonical layout across resize', async ({
     .toBe(6);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator('#dashboard-grid')).toHaveClass(/gs-1\b/);
-  console.log(
-    'MOBILE_OVERFLOW',
-    await page.evaluate(() =>
-      [...document.querySelectorAll('*')]
-        .filter((el) => el.getBoundingClientRect().right > innerWidth)
-        .map((el) => [el.tagName, el.className, el.getBoundingClientRect().right]),
-    ),
-  );
   await expect
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
     .toBe(true);
@@ -234,14 +226,6 @@ test('month range picker supports presets, cancel, and responsive layout', async
   await page.setViewportSize({ width: 390, height: 844 });
   await trigger.click();
   await expect(page.locator('#period-panel')).toBeVisible();
-  console.log(
-    'MOBILE_OVERFLOW',
-    await page.evaluate(() =>
-      [...document.querySelectorAll('*')]
-        .filter((el) => el.getBoundingClientRect().right > innerWidth)
-        .map((el) => [el.tagName, el.className, el.getBoundingClientRect().right]),
-    ),
-  );
   await expect
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
     .toBe(true);
