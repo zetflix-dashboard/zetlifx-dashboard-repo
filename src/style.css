@@ -1186,6 +1186,7 @@ dialog label {
 
   .workspace-switch {
     position: relative;
+    left: auto;
     width: min(300px, 100%);
     margin: 0 auto;
   }
