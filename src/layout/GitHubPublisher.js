@@ -24,7 +24,7 @@ export class GitHubError extends Error {
 }
 
 export class GitHubPublisher {
-  constructor(token = '', fetcher = fetch) {
+  constructor(token = '', fetcher = (url, options) => fetch(url, options)) {
     this.token = token;
     this.fetcher = fetcher;
   }
