@@ -69,6 +69,32 @@ let headingEditingId = null;
 let confirmAction;
 let saveTimer;
 let saved = false;
+const saveStatus = byId('save-state');
+function statusSaved(text) { saveStatus.textContent = text; }
+function draftDiff(baseState, candidate) {
+  const oldSpaces = new Map(baseState.spaces.map((space) => [space.id, space]));
+  const summary = { spaces: 0, added: 0, removed: 0, moved: 0, resized: 0, filters: 0, headings: 0 };
+  for (const space of candidate.spaces) {
+    const old = oldSpaces.get(space.id);
+    if (!old || old.title !== space.title) summary.spaces++;
+    const original = new Map((old?.widgets || []).map((widget) => [widget.instanceId, widget]));
+    for (const widget of space.widgets) {
+      const previous = original.get(widget.instanceId);
+      if (!previous) summary.added++;
+      else {
+        if (previous.x !== widget.x || previous.y !== widget.y) summary.moved++;
+        if (previous.w !== widget.w || previous.h !== widget.h) summary.resized++;
+        if (JSON.stringify(previous.localFilters || {}) !== JSON.stringify(widget.localFilters || {})) summary.filters++;
+        if (previous.title !== widget.title) summary.headings++;
+        original.delete(widget.instanceId);
+      }
+    }
+    summary.removed += original.size;
+    oldSpaces.delete(space.id);
+  }
+  summary.spaces += oldSpaces.size;
+  return summary;
+}
 const grid = new GridManager(
   byId('dashboard-grid'),
   charts,
@@ -102,7 +128,7 @@ function message(text) {
 function persist() {
   clearTimeout(saveTimer);
   saved = false;
-  byId('save-state').textContent = 'Сохранение…';
+  statusSaved('Сохраняем…');
   saveTimer = setTimeout(flush, 250);
 }
 function flush() {
@@ -119,9 +145,9 @@ function flush() {
       JSON.stringify({ state: draftStore.current(), base: draftBase, submittedSha }),
     );
     saved = true;
-    byId('save-state').textContent = showCommon ? 'Общий макет' : 'Локальный макет';
+    statusSaved('Сохранено в этом браузере');
   } catch {
-    byId('save-state').textContent = 'Не сохранено';
+    statusSaved('Не удалось сохранить');
     message(
       'Сохранение в браузере недоступно. Экспортируйте пространства через меню действий, чтобы не потерять изменения.',
     );
@@ -129,7 +155,7 @@ function flush() {
 }
 function syncControls() {
   byId('publish-workspace').disabled =
-    !editing || (draftBase === publishedSha && sameLayout(store.state, published));
+    !editing || !saved || (draftBase === publishedSha && sameLayout(store.state, published));
   byId('reset-draft').hidden = !editing || draftBase === publishedSha;
   byId('undo-btn').disabled = !store.past.length;
   byId('redo-btn').disabled = !store.future.length;
@@ -239,7 +265,7 @@ function setEditing(value) {
   if (editing) {
     if (draftBase !== publishedSha)
       message(
-        'Черновик сделан на старом макете. Экспортируйте его или откройте новый общий макет.',
+        'Команда обновила общий макет. Ваши изменения сохранены: скачайте копию перед переходом на новую версию.',
       );
     render();
     byId('save-draft').focus();
@@ -247,20 +273,20 @@ function setEditing(value) {
     render();
     byId('edit-btn').focus();
   }
-  byId('save-state').textContent = 'Локальный макет';
+  statusSaved('Сохранено в этом браузере');
 }
 byId('edit-btn').addEventListener('click', () => setEditing(true));
 byId('save-draft').addEventListener('click', () => setEditing(false));
 byId('workspace-view').addEventListener('change', (event) => {
   showCommon = event.target.checked;
   store = showCommon ? commonStore : (draftStore ?? commonStore);
-  byId('save-state').textContent = showCommon ? 'Общий макет' : 'Локальный макет';
+  statusSaved(showCommon ? 'Вы смотрите общий макет' : 'Личные изменения — только в этом браузере');
   render();
 });
 byId('reset-draft').addEventListener('click', () =>
   confirm(
-    'Открыть новый общий макет?',
-    'Текущий черновик будет скачан как JSON. Перенесите нужные изменения в новый макет вручную.',
+    'Начать с новой общей версии?',
+    'Сначала скачаем резервную копию ваших изменений. Затем откроем общую версию, загруженную при открытии страницы.',
     () => {
       exportWorkspace();
       draftBase = publishedSha;
@@ -522,7 +548,7 @@ byId('import-file').addEventListener('change', async (event) => {
 window.addEventListener('storage', (event) => {
   if (event.key === DRAFT_KEY)
     message(
-      'Пространства изменены в другой вкладке. Экспортируйте текущую версию перед перезагрузкой, если хотите её сохранить.',
+      'Личный макет изменён в другой вкладке. Сохраните копию через меню, прежде чем перезагружать страницу.',
     );
 });
 window.addEventListener('beforeunload', (event) => {
@@ -543,5 +569,5 @@ window.addEventListener('pagehide', (event) => {
   }
 });
 render();
-byId('save-state').textContent = 'Локальный макет';
+statusSaved(draftStore ? 'Личный макет — в этом браузере' : 'Открыт общий макет');
 if (loaded.warning) message(loaded.warning);
