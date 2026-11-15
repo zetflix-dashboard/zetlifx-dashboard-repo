@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "previousBlobSha": "9454af93f5ea0472fccf2ad052a932239b7d8895",
+  "previousBlobSha": "f272a2e5b25f81fad138fb80679d2a1697ec2dac",
   "spaces": [
     {
       "id": "imported",
@@ -35,13 +35,21 @@
           "h": 1
         },
         {
+          "instanceId": "9892bfe1-f29c-4939-901a-3a9ccbbe78f0",
+          "chartId": "C14",
+          "x": 0,
+          "y": 7,
+          "w": 12,
+          "h": 5
+        },
+        {
           "instanceId": "6c4a7286-edd0-492c-adef-52886fd497ec",
           "chartId": "C15",
           "localFilters": {
             "access": "Пробный период"
           },
           "x": 0,
-          "y": 7,
+          "y": 12,
           "w": 12,
           "h": 1
         }
