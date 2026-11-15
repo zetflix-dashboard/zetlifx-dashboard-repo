@@ -81,17 +81,14 @@ test('mobile uses full width and saves canonical layout across resize', async ({
     .toBe(6);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator('#dashboard-grid')).toHaveClass(/gs-1\b/);
-  console.log('MOBILE_OVERFLOW', await page.evaluate(() => ({
-    viewport: innerWidth,
-    scrollWidth: document.documentElement.scrollWidth,
-    elements: [...document.querySelectorAll('*')].filter((el) => {
-      const rect = el.getBoundingClientRect();
-      return rect.right > innerWidth + 1 || rect.left < -1;
-    }).slice(0, 20).map((el) => ({
-      tag: el.tagName, className: typeof el.className === 'string' ? el.className.slice(0, 100) : '',
-      id: el.id, left: Math.round(el.getBoundingClientRect().left), right: Math.round(el.getBoundingClientRect().right)
-    }))
-  })));
+  console.log(
+    'MOBILE_OVERFLOW',
+    await page.evaluate(() =>
+      [...document.querySelectorAll('*')]
+        .filter((el) => el.getBoundingClientRect().right > innerWidth)
+        .map((el) => [el.tagName, el.className, el.getBoundingClientRect().right]),
+    ),
+  );
   await expect
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
     .toBe(true);
@@ -237,17 +234,14 @@ test('month range picker supports presets, cancel, and responsive layout', async
   await page.setViewportSize({ width: 390, height: 844 });
   await trigger.click();
   await expect(page.locator('#period-panel')).toBeVisible();
-  console.log('MOBILE_OVERFLOW', await page.evaluate(() => ({
-    viewport: innerWidth,
-    scrollWidth: document.documentElement.scrollWidth,
-    elements: [...document.querySelectorAll('*')].filter((el) => {
-      const rect = el.getBoundingClientRect();
-      return rect.right > innerWidth + 1 || rect.left < -1;
-    }).slice(0, 20).map((el) => ({
-      tag: el.tagName, className: typeof el.className === 'string' ? el.className.slice(0, 100) : '',
-      id: el.id, left: Math.round(el.getBoundingClientRect().left), right: Math.round(el.getBoundingClientRect().right)
-    }))
-  })));
+  console.log(
+    'MOBILE_OVERFLOW',
+    await page.evaluate(() =>
+      [...document.querySelectorAll('*')]
+        .filter((el) => el.getBoundingClientRect().right > innerWidth)
+        .map((el) => [el.tagName, el.className, el.getBoundingClientRect().right]),
+    ),
+  );
   await expect
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
     .toBe(true);
