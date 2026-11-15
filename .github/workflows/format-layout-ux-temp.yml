@@ -1,0 +1,28 @@
+name: Temporary format layout UX branch
+on:
+  push:
+    branches:
+      - admin/layout-publishing-ux
+permissions:
+  contents: write
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx prettier --write src/main.js src/layout/WorkspacePublishingUI.js src/style.css index.html tests/browser/dashboard.spec.js
+      - name: Remove temporary workflow and commit formatting
+        run: |
+          git rm .github/workflows/format-layout-ux-temp.yml
+          git add src/main.js src/layout/WorkspacePublishingUI.js src/style.css index.html tests/browser/dashboard.spec.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Format layout publishing UX changes"
+          git push origin HEAD:admin/layout-publishing-ux
