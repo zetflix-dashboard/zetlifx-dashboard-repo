@@ -1381,7 +1381,7 @@ dialog {
 }
 
 
-/* Publication UX: components inherit the existing dashboard theme tokens. */
+/* Publication UX: components inherit existing dashboard theme tokens. */
 .save-indicator {
   display: inline-flex;
   align-items: center;
@@ -1402,7 +1402,9 @@ dialog {
   padding: 9px 12px;
   font-size: 12px;
 }
-.publication-progress > summary::-webkit-details-marker { display: none; }
+.publication-progress > summary::-webkit-details-marker {
+  display: none;
+}
 .publication-progress-panel {
   position: absolute;
   z-index: 100;
@@ -1451,7 +1453,9 @@ dialog {
   line-height: 1.5;
 }
 @media (max-width: 850px) {
-  .save-indicator { display: none; }
+  .save-indicator {
+    display: none;
+  }
 }
 @media (max-width: 600px) {
   .publication-progress-panel {
