@@ -608,3 +608,43 @@ test('saved layouts reach sibling tabs and public availability is verified separ
   await expect(page.locator('#sync-notice')).toBeHidden();
   expect(remote.writes()).toBe(1);
 });
+
+test('the chart library is separate from the add dialog and removes charts for the project', async ({
+  page,
+  context,
+}) => {
+  const remote = mockWorkspace();
+  const sibling = await context.newPage();
+  await remote.install(page);
+  await remote.install(sibling);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await sibling.goto('./');
+  await page.goto('./');
+  await page.locator('#nav-charts').click();
+  await expect(page.locator('#dashboard-page')).toBeHidden();
+  await expect(page.locator('#nav-charts')).toHaveAttribute('aria-current', 'page');
+  const tiles = page.locator('.chart-library-tile');
+  await expect(tiles).toHaveCount(5);
+  await expect(page.locator('.chart-library-preview canvas')).toHaveCount(5);
+  await expect(tiles.filter({ hasText: 'C20' })).toContainText('Таблица');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.locator('#nav-dashboard').click();
+  await page.locator('#edit-btn').click();
+  await page.locator('#add-btn').click();
+  await expect(page.locator('[data-chart-id="C20"]').first()).toContainText('C20 · RFM');
+  await page.keyboard.press('Escape');
+  await save(page);
+  await page.locator('#nav-charts').click();
+  await page.getByRole('button', { name: 'Удалить из проекта C03' }).click();
+  await page.locator('#confirm-dialog button[value="confirm"]').click();
+  await expect(tiles).toHaveCount(4);
+  await expect(page.locator('#sync-notice')).toHaveClass(/sync-success/);
+  await expect(sibling.locator('[data-instance-id="c03-initial"]')).toHaveCount(0);
+  expect(remote.writes()).toBe(1);
+  await page.reload();
+  await expect(tiles).toHaveCount(4);
+  await page.locator('#nav-dashboard').click();
+  await page.locator('#edit-btn').click();
+  await page.locator('#add-btn').click();
+  await expect(page.locator('#catalog-items [data-chart-id="C03"]')).toHaveCount(0);
+});

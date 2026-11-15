@@ -2,11 +2,33 @@ import { validateLayout, STORAGE_KEY as LEGACY_KEY } from './LayoutStorage.js';
 export const WORKSPACE_KEY = 'zetflix.workspaces.v2';
 export const MAX_SPACES = 40;
 const copy = (value) => structuredClone(value);
+export function omitRemovedCharts(spaces, removedCharts) {
+  if (!removedCharts.length) return spaces;
+  const removed = new Set(removedCharts);
+  return spaces.map((space) =>
+    Array.isArray(space?.widgets)
+      ? { ...space, widgets: space.widgets.filter((widget) => !removed.has(widget?.chartId)) }
+      : space,
+  );
+}
 export function validateWorkspace(raw, known) {
-  if (!raw || raw.version !== 2 || !Array.isArray(raw.spaces) || raw.spaces.length > MAX_SPACES)
+  if (
+    !raw ||
+    ![2, 3].includes(raw.version) ||
+    !Array.isArray(raw.spaces) ||
+    raw.spaces.length > MAX_SPACES
+  )
     throw new Error('Неподдерживаемый файл пространств');
+  const removed = raw.removedCharts === undefined ? [] : raw.removedCharts;
+  if (
+    !Array.isArray(removed) ||
+    removed.length > 100 ||
+    removed.some((id) => typeof id !== 'string' || !/^C\d{2}$/.test(id))
+  )
+    throw new Error('Некорректный список удалённых графиков');
+  const removedCharts = [...new Set(removed)].sort();
   const ids = new Set();
-  const spaces = raw.spaces.map((space) => {
+  const spaces = omitRemovedCharts(raw.spaces, removedCharts).map((space) => {
     if (
       !space ||
       typeof space.id !== 'string' ||
@@ -25,7 +47,12 @@ export function validateWorkspace(raw, known) {
   });
   if (spaces.length ? !ids.has(raw.activeId) : raw.activeId !== null)
     throw new Error('Активное пространство не найдено');
-  return { version: 2, activeId: raw.activeId, spaces };
+  return {
+    version: removedCharts.length ? 3 : raw.version,
+    activeId: raw.activeId,
+    spaces,
+    ...(removedCharts.length ? { removedCharts } : {}),
+  };
 }
 export function createWorkspace(charts, id = 'initial') {
   return {

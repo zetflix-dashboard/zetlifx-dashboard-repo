@@ -1,4 +1,4 @@
-import { loadWorkspace, validateWorkspace } from './WorkspaceStore.js';
+import { loadWorkspace, omitRemovedCharts, validateWorkspace } from './WorkspaceStore.js';
 
 export const WORKSPACE_PATH = 'src/layout/workspace.json';
 export const MAX_WORKSPACE_BYTES = 1_000_000;
@@ -13,18 +13,23 @@ export function validateSharedWorkspace(raw, known, activeId) {
   const selected = spaces?.some?.((space) => space?.id === activeId)
     ? activeId
     : (spaces?.[0]?.id ?? null);
-  return validateWorkspace({ version: raw?.version, activeId: selected, spaces }, known);
+  return validateWorkspace(
+    { version: raw?.version, activeId: selected, spaces, removedCharts: raw?.removedCharts },
+    known,
+  );
 }
 
 export function serializeWorkspace(state) {
-  const text = JSON.stringify({ version: state.version, spaces: state.spaces }, null, 2) + '\n';
+  const { activeId, ...shared } = state;
+  const text = JSON.stringify(shared, null, 2) + '\n';
   if (new TextEncoder().encode(text).length > MAX_WORKSPACE_BYTES)
     throw new Error('Файл макета больше 1 МБ');
   return text;
 }
 
 const equal = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-export const sameLayout = (a, b) => equal(a.spaces, b.spaces);
+export const sameLayout = (a, b) =>
+  equal(a.spaces, b.spaces) && equal(a.removedCharts ?? [], b.removedCharts ?? []);
 
 export class WorkspaceConflict extends Error {
   constructor() {
@@ -71,8 +76,18 @@ function mergeSpace(base, local, remote) {
 }
 
 export function mergeWorkspace(base, local, remote, known) {
-  const spaces = mergeById(base.spaces, local.spaces, remote.spaces, 'id', mergeSpace);
-  return validateSharedWorkspace({ version: remote.version, spaces }, known, local.activeId);
+  const removedCharts = [
+    ...new Set([...(local.removedCharts ?? []), ...(remote.removedCharts ?? [])]),
+  ];
+  const [before, wanted, latest] = [base, local, remote].map((state) =>
+    omitRemovedCharts(state.spaces, removedCharts),
+  );
+  const spaces = mergeById(before, wanted, latest, 'id', mergeSpace);
+  return validateSharedWorkspace(
+    { version: remote.version, spaces, removedCharts },
+    known,
+    local.activeId,
+  );
 }
 
 export function recoverLegacyWorkspace(fallback, known, storage) {

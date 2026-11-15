@@ -125,7 +125,7 @@ const SQL_C20 = [
 
 export const datasets = Object.freeze({
   originalsViewing: {
-    label: 'C15 · часы просмотра по происхождению',
+    label: 'часы просмотра по происхождению',
     sources: ['viewing_daily.parquet', 'users.parquet', 'content_titles.parquet'],
     sql: SQL_C15,
     grain: 'происхождение контента за период',
@@ -151,7 +151,7 @@ export const datasets = Object.freeze({
     },
   },
   titleCostPerHour: {
-    label: 'C14 · стоимость часа просмотра',
+    label: 'стоимость часа просмотра',
     sources: [
       'content_amortization.parquet',
       'viewing_daily.parquet',
@@ -192,7 +192,7 @@ export const datasets = Object.freeze({
     },
   },
   rfmSnapshot: {
-    label: 'C20 · RFM на 31.12.2025',
+    label: 'RFM на 31.12.2025',
     sources: ['users.parquet', 'billing_events.parquet', 'viewing_daily.parquet'],
     sql: SQL_C20,
     grain: 'RFM-сегмент прямых плательщиков',

@@ -22,6 +22,7 @@
   --accent-hover: #1d5149;
   --on-accent: #ffffff;
   --danger: #9f5148;
+  --sync-success: #166844;
   --focus-ring: #317d71;
   --brand-mark-bg: #253b38;
   --editor-border: #d3ded9;
@@ -62,6 +63,7 @@
   --accent-hover: #b5dcd3;
   --on-accent: #071513;
   --danger: #eda59d;
+  --sync-success: #86d6ad;
   --focus-ring: #a9d8ce;
   --brand-mark-bg: #262b30;
   --editor-border: #454b52;
@@ -1090,4 +1092,130 @@ dialog label {
 }
 .edit-mode .widget-actions .widget-refresh {
   display: none;
+}
+
+.sync-notice.sync-success {
+  color: var(--sync-success);
+}
+
+.page-switch {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-width: 222px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: var(--surface-muted);
+}
+
+.page-switch a {
+  padding: 6px 12px;
+  border-radius: inherit;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.page-switch a[aria-current='page'] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+body[data-page='charts'] .top-actions > :not(#theme-toggle) {
+  display: none;
+}
+
+.charts-page h1 {
+  margin: 8px 0 20px;
+  font-size: 27px;
+  letter-spacing: -0.035em;
+}
+
+.chart-library {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 245px), 1fr));
+  gap: 16px;
+}
+
+.chart-library-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.chart-library-id {
+  color: var(--accent);
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.chart-library-preview {
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  min-height: 150px;
+  margin: 10px 0 14px;
+  border: 1px solid var(--line-subtle);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.chart-library-preview canvas {
+  width: 112px;
+  height: auto;
+}
+
+.chart-library-title {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.chart-library-type {
+  margin: 6px 0 16px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.chart-library-remove {
+  margin-top: auto;
+  font-size: 12px;
+}
+
+body > #message {
+  margin-inline: 16px;
+}
+
+@media (max-width: 820px) {
+  .topbar {
+    flex-wrap: wrap;
+  }
+
+  .page-switch {
+    position: static;
+    order: 1;
+    margin: 0 auto;
+    transform: none;
+  }
+}
+
+@media (max-width: 540px) {
+  .page-switch {
+    flex-basis: 100%;
+  }
+
+  .charts-page {
+    padding-inline: 12px;
+  }
 }
