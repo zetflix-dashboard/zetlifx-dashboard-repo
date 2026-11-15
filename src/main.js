@@ -230,6 +230,10 @@ function setEditing(value) {
   grid.setEditing(editing);
   byId('editor-bar').hidden = !editing;
   byId('edit-btn').hidden = editing;
+  byId('save-draft').hidden = !editing;
+  byId('publish-workspace').hidden = !editing;
+  reloadCharts.hidden = editing;
+  reloadCharts.disabled = editing;
   byId('workspace-view').disabled = editing;
   byId('workspace-view').checked = showCommon;
   if (editing) {
