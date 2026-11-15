@@ -2,17 +2,19 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import * as echarts from 'echarts';
 import { tableFields, validateChart, validateRows } from '../src/shared/charts/contract.js';
-import { chartTheme } from '../src/shared/charts/templates.js';
+import { chartTheme, indicatorValue } from '../src/shared/charts/templates.js';
 import {
   treeOption,
   waterfallOption,
   funnelOption,
   heatmapOption,
+  sankeyOption,
 } from '../src/shared/charts/specializedOptions.js';
 
 const fields = {
   label: { label: 'Категория', unit: 'text' },
   parent: { label: 'Родитель', unit: 'text' },
+  to: { label: 'Сегмент на конец периода', unit: 'text' },
   step: { label: 'Тип шага', unit: 'text' },
   amount: { label: 'Сумма', unit: 'rub' },
   cohort: { label: 'Когорта', unit: 'month' },
@@ -126,4 +128,67 @@ test('cohort heatmap preserves NULL slots, retains observed zeroes and rejects d
   assert.deepEqual(tableFields(definition), ['age', 'cohort', 'retention']);
   assert.throws(() => validateRows([...rows, rows[0]], definition, catalog), /уникальны/);
   assert.throws(() => validateChart({ ...definition, parent: 'parent' }, catalog));
+});
+
+test('indicator requires explicit aggregation for multirow inputs and preserves zero/NULL', () => {
+  const definition = {
+    id: 'C01',
+    title: 'Выручка за период',
+    question: 'Сколько за период?',
+    dataset: 'sample',
+    template: 'indicator',
+    series: [{ field: 'amount' }],
+    aggregation: 'sum',
+  };
+  assert.equal(validateChart(definition, catalog).template, 'indicator');
+  const rows = [{ amount: 0 }, { amount: null }, { amount: 1500 }];
+  assert.deepEqual(validateRows(rows, definition, catalog), rows);
+  assert.equal(indicatorValue(definition, rows), 1500);
+  assert.equal(indicatorValue({ ...definition, aggregation: 'avg' }, rows), 750);
+  assert.equal(indicatorValue({ ...definition, aggregation: 'min' }, rows), 0);
+  assert.equal(indicatorValue({ ...definition, aggregation: 'max' }, rows), 1500);
+  assert.equal(indicatorValue(definition, [{ amount: null }]), null);
+  assert.throws(() => validateRows(rows, { ...definition, aggregation: undefined }, catalog));
+  assert.throws(() => validateChart({ ...definition, aggregation: 'eval' }, catalog));
+  assert.throws(() => validateChart({ ...definition, dimension: 'label' }, catalog));
+  assert.throws(
+    () => validateChart({ ...definition, series: [{ field: 'retention' }] }, catalog),
+    /суммировать/,
+  );
+});
+
+test('sankey renders separate sides and selected-source focus without falsifying flows', () => {
+  const definition = {
+    ...base,
+    template: 'sankey',
+    target: 'to',
+    sourceTitle: 'Январь 2024',
+    targetTitle: 'Декабрь 2025',
+  };
+  const rows = [
+    { label: 'Приток', to: 'Новые', amount: 30 },
+    { label: 'Приток', to: 'Потерянные', amount: 10 },
+    { label: 'Новые', to: 'Новые', amount: 5 },
+  ];
+  const { option, svg } = render(definition, rows, sankeyOption);
+  assert.equal(option.series[0].type, 'sankey');
+  assert.equal(option.series[0].data.length, 4);
+  assert.match(svg, /Приток/);
+  assert.deepEqual(tableFields(definition), ['label', 'to', 'amount']);
+  assert.deepEqual(
+    option.series[0].links.map((link) => link.value),
+    [30, 10, 5],
+  );
+  assert.notEqual(option.series[0].links[0].source, option.series[0].links[0].target);
+  const selected = sankeyOption(definition, rows, fields, chartTheme(), 'Приток');
+  assert.equal(selected.series[0].links[0].lineStyle.opacity, 0.72);
+  assert.equal(selected.series[0].links[2].lineStyle.opacity, 0.035);
+  assert.throws(() => validateRows([...rows, rows[0]], definition, catalog), /уникальны/);
+  assert.throws(
+    () => validateRows([{ label: 'Приток', to: 'Новые', amount: -1 }], definition, catalog),
+    /неотрицательные/,
+  );
+  assert.throws(() => validateChart({ ...definition, target: 'amount' }, catalog));
+  assert.throws(() => validateChart({ ...definition, sourceTitle: 'x'.repeat(61) }, catalog));
+  assert.throws(() => validateChart({ ...definition, html: '<svg></svg>' }, catalog));
 });

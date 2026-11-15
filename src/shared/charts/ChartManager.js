@@ -1,4 +1,5 @@
 import * as echarts from 'echarts/core';
+import './template-styles.css';
 import {
   LineChart,
   BarChart,
@@ -8,6 +9,7 @@ import {
   CustomChart,
   FunnelChart,
   HeatmapChart,
+  SankeyChart,
 } from 'echarts/charts';
 import {
   GridComponent,
@@ -21,7 +23,7 @@ import { ChartRegistry } from './ChartRegistry.js';
 import { datasets } from '../data/datasets.js';
 import { datasetQueryParams, validateLocalFilters } from '../filters/LocalFilters.js';
 import { validateRows } from './contract.js';
-import { buildOption, renderTable } from './templates.js';
+import { buildOption, chartTheme, renderIndicator, renderTable } from './templates.js';
 echarts.use([
   LineChart,
   BarChart,
@@ -31,6 +33,7 @@ echarts.use([
   CustomChart,
   FunnelChart,
   HeatmapChart,
+  SankeyChart,
   GridComponent,
   TooltipComponent,
   LegendComponent,
@@ -62,6 +65,7 @@ export class ChartManager {
       chart: null,
       request: 0,
       tableSort: {},
+      focusSource: null,
       table: definition.template === 'table',
     };
     session.observer = new ResizeObserver(() => session.chart?.resize());
@@ -74,15 +78,63 @@ export class ChartManager {
     session.chart = null;
     session.node.replaceChildren();
     session.node.classList.toggle('table-view', session.table);
-    if (session.table)
+    session.node.classList.toggle(
+      'indicator-view',
+      !session.table && session.definition.template === 'indicator',
+    );
+    session.node.classList.toggle(
+      'sankey-view',
+      !session.table && session.definition.template === 'sankey',
+    );
+    if (session.table) {
       renderTable(session.node, session.definition, session.rows, session.tableSort);
-    else {
-      session.chart = echarts.init(session.node, null, { renderer: 'canvas' });
+    } else if (session.definition.template === 'indicator') {
+      renderIndicator(session.node, session.definition, session.rows);
+    } else {
+      let plot = session.node;
+      if (session.definition.template === 'sankey') {
+        const controls = document.createElement('div');
+        controls.className = 'sankey-filters';
+        controls.setAttribute('role', 'group');
+        controls.setAttribute('aria-label', 'Выделить исходный сегмент');
+        const sources = [
+          ...new Set(session.rows.map((row) => String(row[session.definition.dimension]))),
+        ];
+        for (const source of [null, ...sources]) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.textContent = source === null ? 'Все' : source;
+          button.setAttribute('aria-pressed', String(session.focusSource === source));
+          button.addEventListener('click', () => {
+            if (session.focusSource === source) return;
+            session.focusSource = source;
+            this.draw(session);
+          });
+          controls.append(button);
+        }
+        const stageLabels = document.createElement('div');
+        stageLabels.className = 'sankey-stage-labels';
+        const sourceTitle = document.createElement('span');
+        sourceTitle.textContent =
+          session.definition.sourceTitle ||
+          datasets[session.definition.dataset].fields[session.definition.dimension].label;
+        const targetTitle = document.createElement('span');
+        targetTitle.textContent =
+          session.definition.targetTitle ||
+          datasets[session.definition.dataset].fields[session.definition.target].label;
+        stageLabels.append(sourceTitle, targetTitle);
+        plot = document.createElement('div');
+        plot.className = 'sankey-plot';
+        session.node.append(controls, stageLabels, plot);
+      }
+      session.chart = echarts.init(plot, null, { renderer: 'canvas' });
       session.chart.setOption(
         buildOption(
           session.definition,
           session.rows,
           matchMedia('(prefers-reduced-motion: reduce)').matches,
+          chartTheme(),
+          session.focusSource,
         ),
       );
     }
@@ -130,6 +182,12 @@ export class ChartManager {
       );
       if (this.sessions.get(id) !== s || request !== s.request) return;
       s.rows = rows;
+      if (
+        s.definition.template === 'sankey' &&
+        s.focusSource !== null &&
+        !rows.some((row) => String(row[s.definition.dimension]) === s.focusSource)
+      )
+        s.focusSource = null;
       if (!rows.length) {
         s.overlay.textContent = 'За выбранный период нет данных';
         return;
@@ -159,6 +217,8 @@ export class ChartManager {
             session.definition,
             session.rows,
             matchMedia('(prefers-reduced-motion: reduce)').matches,
+            chartTheme(),
+            session.focusSource,
           ),
           { notMerge: true },
         );

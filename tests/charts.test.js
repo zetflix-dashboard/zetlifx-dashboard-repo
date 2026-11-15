@@ -43,7 +43,7 @@ test('rejects arbitrary options, styles, executable hooks, unknown sources/field
     { option: {} },
     { css: 'body{}' },
     { load: 'code' },
-    { template: 'sankey' },
+    { template: 'radar' },
     { dataset: '__proto__' },
     { dimension: 'unknown' },
     { series: [{ field: 'missing' }] },

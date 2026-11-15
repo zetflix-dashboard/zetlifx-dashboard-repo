@@ -15,8 +15,20 @@ for (const [path, raw] of Object.entries(imports)) {
     chart.id,
     Object.freeze({
       ...chart,
-      defaultSize: chart.template === 'table' ? { w: 12, h: 8 } : { w: 6, h: 5 },
-      minSize: { w: 4, h: 4 },
+      defaultSize:
+        chart.template === 'table'
+          ? { w: 12, h: 8 }
+          : chart.template === 'sankey'
+            ? { w: 12, h: 7 }
+            : chart.template === 'indicator'
+              ? { w: 4, h: 2 }
+              : { w: 6, h: 5 },
+      minSize:
+        chart.template === 'indicator'
+          ? { w: 3, h: 2 }
+          : chart.template === 'sankey'
+            ? { w: 6, h: 5 }
+            : { w: 4, h: 4 },
     }),
   );
 }

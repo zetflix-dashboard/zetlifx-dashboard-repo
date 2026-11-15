@@ -219,3 +219,88 @@ export function heatmapOption(definition, rows, fields, theme) {
     ],
   };
 }
+
+export function sankeyOption(definition, rows, fields, theme, selectedSource = null) {
+  const sourceField = definition.dimension;
+  const targetField = definition.target;
+  const metric = definition.series[0].field;
+  const unit = fields[metric].unit;
+  const sources = [...new Set(rows.map((row) => String(row[sourceField])))];
+  const targets = [...new Set(rows.map((row) => String(row[targetField])))];
+  const categories = [...new Set([...sources, ...targets])];
+  const color = (name) => theme.palette[categories.indexOf(name) % theme.palette.length];
+  const totals = (field, name) =>
+    rows.reduce((total, row) => total + (String(row[field]) === name ? Number(row[metric]) : 0), 0);
+  const active = selectedSource !== null && sources.includes(selectedSource);
+  const nodes = [
+    ...sources.map((name) => ({
+      name: 'source:' + name,
+      display: name,
+      value: totals(sourceField, name),
+      depth: 0,
+      itemStyle: { color: color(name), opacity: active && selectedSource !== name ? 0.28 : 1 },
+      label: { position: 'left' },
+    })),
+    ...targets.map((name) => ({
+      name: 'target:' + name,
+      display: name,
+      value: totals(targetField, name),
+      depth: 1,
+      itemStyle: { color: color(name) },
+      label: { position: 'right' },
+    })),
+  ];
+  const links = rows.map((row) => {
+    const from = String(row[sourceField]);
+    const to = String(row[targetField]);
+    return {
+      source: 'source:' + from,
+      target: 'target:' + to,
+      from,
+      to,
+      value: Number(row[metric]),
+      lineStyle: {
+        color: color(from),
+        opacity: active ? (from === selectedSource ? 0.72 : 0.035) : 0.3,
+      },
+    };
+  });
+  return {
+    tooltip: {
+      formatter: (params) => {
+        const item = params.data;
+        return 'from' in item
+          ? item.from + ' → ' + item.to + '\\n' + formatValue(item.value, unit)
+          : item.display + '\\n' + formatValue(item.value, unit);
+      },
+    },
+    series: [
+      {
+        type: 'sankey',
+        name: fields[metric].label,
+        orient: 'horizontal',
+        nodeAlign: 'justify',
+        nodeWidth: 15,
+        nodeGap: 12,
+        layoutIterations: 32,
+        draggable: false,
+        left: '23%',
+        right: '23%',
+        top: 16,
+        bottom: 12,
+        data: nodes,
+        links,
+        label: {
+          show: true,
+          color: theme.text,
+          fontSize: 11,
+          overflow: 'truncate',
+          width: 125,
+          formatter: (params) => params.data.display,
+        },
+        lineStyle: { curveness: 0.45 },
+        emphasis: { focus: 'adjacency' },
+      },
+    ],
+  };
+}

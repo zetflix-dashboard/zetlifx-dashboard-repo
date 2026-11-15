@@ -1,6 +1,12 @@
 import { datasets } from '../data/datasets.js';
 import { isNumeric, tableFields } from './contract.js';
-import { treeOption, waterfallOption, funnelOption, heatmapOption } from './specializedOptions.js';
+import {
+  treeOption,
+  waterfallOption,
+  funnelOption,
+  heatmapOption,
+  sankeyOption,
+} from './specializedOptions.js';
 import { formatValue } from '../ui/format.js';
 export const PALETTE = Object.freeze([
   '#407bd0',
@@ -33,13 +39,26 @@ const specializedOptions = {
   waterfall: waterfallOption,
   funnel: funnelOption,
   heatmap: heatmapOption,
+  sankey: sankeyOption,
 };
 
-export function buildOption(definition, rows, reducedMotion = false, theme = chartTheme()) {
+export function buildOption(
+  definition,
+  rows,
+  reducedMotion = false,
+  theme = chartTheme(),
+  selectedSource = null,
+) {
   const fields = datasets[definition.dataset].fields;
   const specializedOption = specializedOptions[definition.template];
   if (specializedOption) {
-    const { tooltip, ...option } = specializedOption(definition, rows, fields, theme);
+    const { tooltip, ...option } = specializedOption(
+      definition,
+      rows,
+      fields,
+      theme,
+      selectedSource,
+    );
     return {
       backgroundColor: 'transparent',
       color: theme.palette,
@@ -286,4 +305,36 @@ export function renderTable(container, definition, rows, sort = {}) {
   }
   if (headings.has(sort.field)) applySort();
   container.replaceChildren(table);
+}
+
+export function indicatorValue(definition, rows) {
+  const field = definition.series[0].field;
+  const values = rows
+    .map((row) => row[field])
+    .filter((value) => value != null)
+    .map(Number);
+  if (!values.length) return null;
+  switch (definition.aggregation) {
+    case 'sum':
+      return values.reduce((total, value) => total + value, 0);
+    case 'avg':
+      return values.reduce((total, value) => total + value, 0) / values.length;
+    case 'min':
+      return Math.min(...values);
+    case 'max':
+      return Math.max(...values);
+    default:
+      return values[0];
+  }
+}
+
+export function renderIndicator(container, definition, rows) {
+  const metric = definition.series[0].field;
+  const fields = datasets[definition.dataset].fields;
+  const value = formatValue(indicatorValue(definition, rows), fields[metric].unit);
+  const output = document.createElement('output');
+  output.className = 'indicator-value';
+  output.textContent = value;
+  output.setAttribute('aria-label', fields[metric].label + ': ' + value);
+  container.replaceChildren(output);
 }
