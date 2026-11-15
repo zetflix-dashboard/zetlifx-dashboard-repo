@@ -619,7 +619,9 @@ test('publication resumes a created PR after a network error and never stores th
   await expect(page.locator('#publication-link')).toHaveAttribute('href', /\/pull\/42$/);
   await page.locator('#confirm-publish').click();
   await expect(page.locator('#publish-dialog')).toBeHidden();
-  await expect(page.locator('#publication-status')).toContainText('Автослияние запрошено');
+  await expect(page.locator('#publication-status')).toContainText('Изменения отправлены на проверку');
+  await expect(page.locator('#publication-progress')).toBeVisible();
+  await expect(page.locator('#progress-title')).toContainText('Проверяем изменения');
   expect(updates).toHaveLength(1);
   expect(updates[0].body.sha).toBe(base);
   expect(updates[0].json).toMatchObject({
@@ -632,4 +634,25 @@ test('publication resumes a created PR after a network error and never stores th
   expect(await page.evaluate(() => JSON.stringify([localStorage, sessionStorage]))).not.toContain(
     'github_pat_test_token',
   );
+});
+
+
+test('personal layout labels and publication preview explain intended team changes', async ({
+  page,
+}) => {
+  await ready(page);
+  await expect(page.locator('.workspace-local')).toHaveText('Мой макет');
+  await expect(page.locator('.workspace-common')).toHaveText('Общий макет');
+  await page.locator('#edit-btn').click();
+  await expect(page.locator('#save-draft')).toHaveText('Сохранить для себя');
+  await page.locator('#add-heading-btn').click();
+  await page.locator('#heading-text').fill('План работы команды');
+  await page.locator('#heading-form button[type="submit"]').click();
+  await expect(page.locator('#save-state')).toContainText('Сохранено в этом браузере');
+  await page.locator('#publish-workspace').click();
+  await expect(page.locator('#publish-preview')).toContainText('Добавлено блоков: 1');
+  await expect(page.locator('#publish-preview')).toContainText('Что изменится для команды');
+  await page.locator('#cancel-publish').click();
+  await page.locator('#save-draft').click();
+  await expect(page.locator('#save-state')).toContainText('Сохранено в этом браузере');
 });
