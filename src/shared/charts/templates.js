@@ -85,12 +85,15 @@ export function buildOption(definition, rows, reducedMotion = false, theme = cha
           type: 'pie',
           radius: ['41%', '63%'],
           center: ['50%', '43%'],
+          minShowLabelAngle: 8,
           label: {
             show: true,
+            position: 'inside',
             formatter: ({ percent }) => formatValue(percent, 'percent'),
-            color: theme.text,
-            alignTo: 'edge',
-            edgeDistance: 12,
+            color: theme.tooltipText,
+            backgroundColor: theme.tooltip,
+            padding: [2, 4],
+            borderRadius: 3,
           },
           itemStyle: { borderColor: theme.tooltip, borderWidth: 2 },
           data: rows.map((row) => ({
