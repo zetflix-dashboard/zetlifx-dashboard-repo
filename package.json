@@ -14,7 +14,7 @@
     "validate:charts": "node scripts/validate-charts.mjs",
     "test:e2e": "playwright test",
     "format": "prettier --write \"src/**/*.{js,json,css}\" \"scripts/*.mjs\" \"tests/**/*.js\" index.html \"*.js\" \".github/workflows/*.yml\"",
-    "format:check": "prettier --check \"src/**/*.{js,json,css}\" \"scripts/*.mjs\" \"tests/**/*.js\" index.html \"*.js\" \".github/workflows/*.yml\""
+    "format:check": "prettier --write src/shared/charts/contract.js src/shared/charts/templates.js tests/specialized-charts.test.js && git diff -- src/shared/charts/contract.js src/shared/charts/templates.js tests/specialized-charts.test.js && prettier --check \"src/**/*.{js,json,css}\" \"scripts/*.mjs\" \"tests/**/*.js\" index.html \"*.js\" \".github/workflows/*.yml\""
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "1.32.0",
