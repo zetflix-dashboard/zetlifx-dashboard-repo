@@ -1,6 +1,5 @@
 import './style.css';
 import { ChartRegistry } from './shared/charts/ChartRegistry.js';
-import { gallerySpace } from './shared/charts/gallery.js';
 import { ChartManager } from './shared/charts/ChartManager.js';
 import { DataClient } from './shared/data/DataClient.js';
 import { FilterStore } from './shared/filters/FilterStore.js';
@@ -35,7 +34,6 @@ const loaded = loadWorkspace(createWorkspace(starter), known, storage);
 const store = new WorkspaceStore(loaded.state, known);
 let recovery = Boolean(loaded.recovery);
 let editing = false;
-let galleryActive = new URL(location.href).searchParams.get('gallery') === '1';
 let naming = 'create';
 let headingEditingId = null;
 let confirmAction;
@@ -45,7 +43,6 @@ const grid = new GridManager(
   byId('dashboard-grid'),
   charts,
   (layout) => {
-    if (galleryActive) return;
     try {
       store.changeActive({ widgets: layout.widgets });
       persist();
@@ -89,10 +86,7 @@ function syncControls() {
   byId('undo-btn').disabled = !store.past.length;
   byId('redo-btn').disabled = !store.future.length;
   const active = store.active();
-  byId('empty-layout').hidden = galleryActive || Boolean(active?.widgets.length);
-  byId('gallery-note').hidden = !galleryActive;
-  byId('period-picker').parentElement.hidden = galleryActive;
-  byId('edit-btn').hidden = galleryActive;
+  byId('empty-layout').hidden = Boolean(active?.widgets.length);
   byId('empty-title').textContent = active
     ? 'Пространство для ваших данных'
     : 'Создайте первое пространство';
@@ -102,52 +96,35 @@ function syncControls() {
   byId('empty-action').textContent = active ? 'Добавить график' : 'Создать пространство';
   byId('add-btn').disabled = !active;
   byId('add-heading-btn').disabled = !active;
-  byId('rename-space').disabled = galleryActive || !active;
-  byId('delete-space').disabled = galleryActive || !active;
-}
-function selectGallery(active) {
-  if (galleryActive === active) return;
-  galleryActive = active;
-  if (active) setEditing(false);
-  const url = new URL(location.href);
-  if (active) url.searchParams.set('gallery', '1');
-  else url.searchParams.delete('gallery');
-  history.replaceState(null, '', url);
+  byId('rename-space').disabled = !active;
+  byId('delete-space').disabled = !active;
 }
 function renderTabs() {
   const tabs = byId('space-tabs');
-  const panel = byId('workspace-panel');
-  const active = galleryActive ? gallerySpace : store.active();
   tabs.replaceChildren();
-  for (const space of [...store.state.spaces, gallerySpace]) {
-    const gallery = space === gallerySpace;
+  for (const space of store.state.spaces) {
     const button = document.createElement('button');
     button.type = 'button';
     button.role = 'tab';
-    button.id = gallery ? 'chart-gallery-tab' : 'tab-' + space.id;
+    button.id = 'tab-' + space.id;
     button.textContent = space.title;
     button.title = space.title;
-    button.setAttribute('aria-selected', String(space === active));
+    button.setAttribute('aria-selected', String(space.id === store.state.activeId));
     button.setAttribute('aria-controls', 'workspace-panel');
-    button.tabIndex = space === active || (!active && gallery) ? 0 : -1;
+    button.tabIndex = space.id === store.state.activeId ? 0 : -1;
     button.addEventListener('click', () => {
-      selectGallery(gallery);
-      if (!gallery && space.id !== store.state.activeId) {
-        store.select(space.id);
-        persist();
-      }
+      store.select(space.id);
+      persist();
       render();
       byId(button.id)?.focus();
     });
     tabs.append(button);
   }
-  const selected = tabs.querySelector('[aria-selected="true"]');
-  if (selected) {
-    panel.setAttribute('aria-labelledby', selected.id);
-    panel.removeAttribute('aria-label');
-  } else {
-    panel.removeAttribute('aria-labelledby');
-    panel.setAttribute('aria-label', 'Пустой дашборд');
+  if (store.active())
+    byId('workspace-panel').setAttribute('aria-labelledby', 'tab-' + store.state.activeId);
+  else {
+    byId('workspace-panel').removeAttribute('aria-labelledby');
+    byId('workspace-panel').setAttribute('aria-label', 'Пустой дашборд');
   }
 }
 byId('space-tabs').addEventListener('keydown', (event) => {
@@ -170,11 +147,7 @@ byId('space-tabs').addEventListener('keydown', (event) => {
 });
 function render() {
   renderTabs();
-  grid.replace({
-    version: 1,
-    dashboardId: 'current',
-    widgets: (galleryActive ? gallerySpace : store.active())?.widgets || [],
-  });
+  grid.replace({ version: 1, dashboardId: 'current', widgets: store.active()?.widgets || [] });
   syncControls();
 }
 function setEditing(value) {
@@ -246,7 +219,6 @@ byId('space-form').addEventListener('submit', (event) => {
     const name = byId('space-name').value.trim();
     if (naming === 'create') store.create(name, crypto.randomUUID());
     else store.changeActive({ title: name });
-    selectGallery(false);
     byId('space-dialog').close();
     persist();
     render();
@@ -279,13 +251,13 @@ byId('delete-space').addEventListener('click', () =>
     },
   ),
 );
-function workspaceHistory(direction) {
+function history(direction) {
   store[direction]();
   persist();
   render();
 }
-byId('undo-btn').addEventListener('click', () => workspaceHistory('undo'));
-byId('redo-btn').addEventListener('click', () => workspaceHistory('redo'));
+byId('undo-btn').addEventListener('click', () => history('undo'));
+byId('redo-btn').addEventListener('click', () => history('redo'));
 document.addEventListener('keydown', (event) => {
   if (
     !editing ||
@@ -296,7 +268,7 @@ document.addEventListener('keydown', (event) => {
   )
     return;
   event.preventDefault();
-  workspaceHistory(event.shiftKey ? 'redo' : 'undo');
+  history(event.shiftKey ? 'redo' : 'undo');
 });
 function openCatalog() {
   byId('catalog-search').value = '';
@@ -403,7 +375,6 @@ byId('import-file').addEventListener('change', async (event) => {
       'Текущие пространства будут заменены. Это действие можно отменить в настройке макета.',
       () => {
         store.commit(state);
-        selectGallery(false);
         persist();
         render();
       },

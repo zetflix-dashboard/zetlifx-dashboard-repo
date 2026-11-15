@@ -18,7 +18,7 @@ import {
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { ChartRegistry } from './ChartRegistry.js';
-import { chartDatasets } from '../data/datasets.js';
+import { datasets } from '../data/datasets.js';
 import { datasetQueryParams, validateLocalFilters } from '../filters/LocalFilters.js';
 import { validateRows } from './contract.js';
 import { buildOption, renderTable } from './templates.js';
@@ -46,7 +46,7 @@ export class ChartManager {
     this.unsubscribe = filters.subscribe(() => this.refreshAll());
   }
   mount(instanceId, chartId, container, localFilters = {}) {
-    const definition = ChartRegistry.getForRender(chartId);
+    const definition = ChartRegistry.get(chartId);
     if (!definition) throw new Error('Неизвестный график');
     const node = document.createElement('div');
     node.className = 'widget-chart';
@@ -56,7 +56,7 @@ export class ChartManager {
     container.append(node, overlay);
     const session = {
       definition,
-      localFilters: validateLocalFilters(definition, localFilters, chartDatasets),
+      localFilters: validateLocalFilters(definition, localFilters),
       node,
       overlay,
       chart: null,
@@ -90,7 +90,7 @@ export class ChartManager {
   setLocalFilters(id, next) {
     const session = this.sessions.get(id);
     if (!session) return;
-    const normalized = validateLocalFilters(session.definition, next, chartDatasets);
+    const normalized = validateLocalFilters(session.definition, next);
     if (JSON.stringify(normalized) === JSON.stringify(session.localFilters)) return;
     session.localFilters = normalized;
     void this.refreshOne(id);
@@ -116,17 +116,15 @@ export class ChartManager {
     s.node.querySelector('table')?.remove();
     s.rows = null;
     try {
-      const dataset = chartDatasets[s.definition.dataset];
-      const rows =
-        dataset.rows ??
-        (await this.data.query(
-          dataset.sources,
-          dataset.sql,
-          datasetQueryParams(s.definition, this.filters.get(), s.localFilters),
-          controller.signal,
-        ));
+      const dataset = datasets[s.definition.dataset];
+      const rows = await this.data.query(
+        dataset.sources,
+        dataset.sql,
+        datasetQueryParams(s.definition, this.filters.get(), s.localFilters),
+        controller.signal,
+      );
       if (this.sessions.get(id) !== s || request !== s.request) return;
-      s.rows = validateRows(rows, s.definition, chartDatasets);
+      s.rows = validateRows(rows, s.definition);
       if (!rows.length) {
         s.overlay.textContent = 'За выбранный период нет данных';
         return;
@@ -164,8 +162,7 @@ export class ChartManager {
   }
   refreshAll() {
     for (const [id, session] of this.sessions) {
-      if (chartDatasets[session.definition.dataset].filters.includes('period'))
-        void this.refreshOne(id);
+      if (datasets[session.definition.dataset].filters.includes('period')) void this.refreshOne(id);
     }
   }
   resizeAll() {

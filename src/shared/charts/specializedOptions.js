@@ -34,7 +34,7 @@ export function treeOption(definition, rows, fields, theme) {
         symbolSize: 8,
         edgeShape: 'polyline',
         lineStyle: { color: theme.axis },
-        label: { position: 'top', color: theme.text, overflow: 'truncate', width: 105 },
+        label: { position: 'left', color: theme.text, overflow: 'truncate', width: 105 },
         leaves: { label: { position: 'right' } },
         emphasis: { focus: 'ancestor' },
       },

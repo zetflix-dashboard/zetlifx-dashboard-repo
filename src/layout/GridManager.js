@@ -1,6 +1,6 @@
 import { GridStack } from 'gridstack';
 import { ChartRegistry } from '../shared/charts/ChartRegistry.js';
-import { chartDatasets } from '../shared/data/datasets.js';
+import { datasets } from '../shared/data/datasets.js';
 import { LAYOUT_VERSION } from './LayoutStorage.js';
 import { createIcon } from '../shared/ui/icons.js';
 import { availableLocalFilters, validateLocalFilters } from '../shared/filters/LocalFilters.js';
@@ -104,24 +104,19 @@ export class GridManager {
       if (notify && !this.silent) this.onChange(this.getLayout());
       return;
     }
-    const definition = ChartRegistry.getForRender(widget.chartId);
+    const definition = ChartRegistry.get(widget.chartId);
     if (!definition) throw new Error('График не найден: ' + widget.chartId);
     if (this.items.has(widget.instanceId)) throw new Error('Повтор ID карточки');
 
     const item = element('div', 'grid-stack-item');
     item.dataset.instanceId = widget.instanceId;
-    item.dataset.chartTemplate = definition.template;
     const content = element('div', 'grid-stack-item-content');
     const head = element('div', 'widget-head');
     const titles = element('div', 'widget-titles');
     const titleRow = element('div', 'widget-title-row');
     titleRow.append(
       element('h3', '', definition.title),
-      element(
-        'span',
-        'widget-chart-id',
-        '· ' + (definition.gallery ? definition.template : definition.id),
-      ),
+      element('span', 'widget-chart-id', '· ' + definition.id),
     );
     const info = element('details', 'widget-info');
     const summary = element('summary');
@@ -133,11 +128,9 @@ export class GridManager {
       '',
       definition.question +
         ' ' +
-        chartDatasets[definition.dataset].limitation +
+        datasets[definition.dataset].limitation +
         ' Фильтры: ' +
-        (chartDatasets[definition.dataset].filters.length
-          ? 'период.'
-          : 'общий период не применяется.'),
+        (datasets[definition.dataset].filters.length ? 'период.' : 'общий период не применяется.'),
     );
     info.append(summary, description);
     titleRow.append(info);
@@ -187,8 +180,8 @@ export class GridManager {
       table.textContent = active ? 'График' : 'Таблица';
       table.setAttribute('aria-pressed', String(active));
     });
-    const localFilters = validateLocalFilters(definition, widget.localFilters || {}, chartDatasets);
-    const filtersList = availableLocalFilters(definition, chartDatasets);
+    const localFilters = validateLocalFilters(definition, widget.localFilters || {});
+    const filtersList = availableLocalFilters(definition);
     for (const filter of filtersList) {
       const label = element('label', 'widget-filter');
       const name = element('span', 'sr-only', filter.label);
