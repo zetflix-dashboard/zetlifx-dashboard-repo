@@ -219,6 +219,9 @@ test('segmented navigation and chart colors adapt to both appearance modes', asy
     });
   const first = await appearance();
   await page.locator('#theme-toggle').click();
+  await expect
+    .poll(() => appearance().then(({ thumb }) => thumb))
+    .toBe(first.theme === 'dark' ? 'rgb(255, 255, 255)' : 'rgb(32, 32, 34)');
   const second = await appearance();
   const light = first.theme === 'light' ? first : second;
   const dark = first.theme === 'dark' ? first : second;
