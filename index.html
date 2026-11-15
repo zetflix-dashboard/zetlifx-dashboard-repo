@@ -237,6 +237,23 @@
         </div>
       </form>
     </dialog>
+    <dialog id="import-dialog" aria-labelledby="import-dialog-title">
+      <form id="import-dialog-form" method="dialog">
+        <h2 id="import-dialog-title">Восстановление макета</h2>
+        <p>
+          Вы можете перенести одно пространство из сохранённой копии, не удаляя остальные,
+          или заменить весь личный макет.
+        </p>
+        <label for="import-space-select">Пространство из копии</label>
+        <select id="import-space-select"></select>
+        <p id="import-dialog-error" role="alert"></p>
+        <div class="dialog-actions">
+          <button type="button" id="import-cancel">Отмена</button>
+          <button type="button" id="import-replace">Заменить весь макет</button>
+          <button type="button" class="primary" id="import-one">Перенести пространство</button>
+        </div>
+      </form>
+    </dialog>
     <dialog id="heading-dialog">
       <form id="heading-form">
         <h2 id="heading-dialog-title">Заголовок</h2>
