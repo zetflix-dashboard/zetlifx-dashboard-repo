@@ -496,8 +496,12 @@ test('gallery renders all ten templates and preserves a saved workspace on deskt
   await page.reload();
   await expect(gallery).toHaveAttribute('aria-selected', 'true');
   await expect(grid.locator('[data-chart-template]')).toHaveCount(10);
-  await expect(grid.locator('[data-chart-template="heatmap"]')).toHaveAttribute('gs-w', '1');
-  await expect(grid.locator('[data-chart-template="heatmap"] canvas').first()).toBeVisible();
+  await expect(grid).toHaveClass(/\bgs-1\b/);
+  const mobileMatrix = grid.locator('[data-chart-template="heatmap"]');
+  await expect(mobileMatrix.locator('canvas').first()).toBeVisible();
+  const { width: gridWidth } = await grid.boundingBox();
+  const { width: cardWidth } = await mobileMatrix.boundingBox();
+  expect(cardWidth).toBeGreaterThanOrEqual(gridWidth - 1);
   await page.screenshot({ path: 'test-results/chart-gallery-mobile.png', fullPage: true });
 
   await page.getByRole('tab', { name: saved.spaces[0].title }).click();
