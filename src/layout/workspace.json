@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "previousBlobSha": "d0905e00532760231c82c9ef9e57a33a63cf2aaa",
+  "previousBlobSha": "9454af93f5ea0472fccf2ad052a932239b7d8895",
   "spaces": [
     {
       "id": "imported",
@@ -35,22 +35,14 @@
           "h": 1
         },
         {
-          "instanceId": "f31cf7f5-7473-4b33-a9c1-bade3c6be23b",
-          "chartId": "C20",
-          "x": 0,
-          "y": 7,
-          "w": 12,
-          "h": 6
-        },
-        {
           "instanceId": "6c4a7286-edd0-492c-adef-52886fd497ec",
           "chartId": "C15",
           "localFilters": {
             "access": "Пробный период"
           },
           "x": 0,
-          "y": 13,
-          "w": 8,
+          "y": 7,
+          "w": 12,
           "h": 1
         }
       ]
