@@ -151,8 +151,8 @@ test('indicator requires explicit aggregation for multirow inputs and preserves 
   assert.throws(() => validateRows(rows, { ...definition, aggregation: undefined }, catalog));
   assert.throws(() => validateChart({ ...definition, aggregation: 'eval' }, catalog));
   assert.throws(() => validateChart({ ...definition, dimension: 'label' }, catalog));
-  assert.throws(() =>
-    validateChart({ ...definition, series: [{ field: 'retention' }] }, catalog),
+  assert.throws(
+    () => validateChart({ ...definition, series: [{ field: 'retention' }] }, catalog),
     /суммировать/,
   );
 });
@@ -175,14 +175,17 @@ test('sankey renders separate sides and selected-source focus without falsifying
   assert.equal(option.series[0].data.length, 4);
   assert.match(svg, /Приток/);
   assert.deepEqual(tableFields(definition), ['label', 'to', 'amount']);
-  assert.deepEqual(option.series[0].links.map((link) => link.value), [30, 10, 5]);
+  assert.deepEqual(
+    option.series[0].links.map((link) => link.value),
+    [30, 10, 5],
+  );
   assert.notEqual(option.series[0].links[0].source, option.series[0].links[0].target);
   const selected = sankeyOption(definition, rows, fields, chartTheme(), 'Приток');
   assert.equal(selected.series[0].links[0].lineStyle.opacity, 0.72);
   assert.equal(selected.series[0].links[2].lineStyle.opacity, 0.035);
   assert.throws(() => validateRows([...rows, rows[0]], definition, catalog), /уникальны/);
-  assert.throws(() =>
-    validateRows([{ label: 'Приток', to: 'Новые', amount: -1 }], definition, catalog),
+  assert.throws(
+    () => validateRows([{ label: 'Приток', to: 'Новые', amount: -1 }], definition, catalog),
     /неотрицательные/,
   );
   assert.throws(() => validateChart({ ...definition, target: 'amount' }, catalog));
