@@ -61,29 +61,3 @@ jobs:
           name: browser-test-results
           path: test-results/
           retention-days: 7
-
-  format-branch:
-    if: github.event_name == 'pull_request' && github.head_ref == 'admin/clear-workspace-save-publish-20261115'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: admin/clear-workspace-save-publish-20261115
-          persist-credentials: true
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: npm
-      - run: npm ci --no-audit --no-fund
-      - run: npx prettier --write src/main.js src/layout/WorkspaceChanges.js src/layout/WorkspacePublishingUI.js src/style.css tests/browser/dashboard.spec.js tests/workspace-changes.test.js vite.config.js index.html
-      - name: Push formatted files if changed
-        run: |
-          if ! git diff --quiet; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add src/main.js src/layout/WorkspaceChanges.js src/layout/WorkspacePublishingUI.js src/style.css tests/browser/dashboard.spec.js tests/workspace-changes.test.js vite.config.js index.html
-            git commit -m "Format workspace UX [format]"
-            git push
-          fi
