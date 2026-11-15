@@ -10,13 +10,13 @@ function publishedWorkspaceVersion() {
     generateBundle() {
       const content = readFileSync(resolve('src/layout/workspace.json'));
       const sha = createHash('sha1')
-        .update('blob ' + content.length + '\\0')
+        .update('blob ' + content.length + String.fromCharCode(0))
         .update(content)
         .digest('hex');
       this.emitFile({
         type: 'asset',
         fileName: 'workspace-version.json',
-        source: JSON.stringify({ sha }) + '\\n',
+        source: JSON.stringify({ sha }),
       });
     },
   };
