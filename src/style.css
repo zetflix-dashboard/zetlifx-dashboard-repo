@@ -1179,11 +1179,13 @@ dialog label {
 
 @media (max-width: 600px) {
   .topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
   }
 
   .workspace-switch {
-    order: 0;
+    position: relative;
     width: min(300px, 100%);
     margin: 0 auto;
   }
@@ -1191,6 +1193,7 @@ dialog label {
   .top-actions {
     justify-content: center;
     width: 100%;
+    min-width: 0;
     margin: 0;
   }
 
