@@ -129,6 +129,7 @@ function persist() {
   clearTimeout(saveTimer);
   saved = false;
   statusSaved('Сохраняем…');
+  syncControls();
   saveTimer = setTimeout(flush, 250);
 }
 function flush() {
@@ -146,8 +147,10 @@ function flush() {
     );
     saved = true;
     statusSaved('Сохранено в этом браузере');
+    syncControls();
   } catch {
     statusSaved('Не удалось сохранить');
+    syncControls();
     message(
       'Сохранение в браузере недоступно. Экспортируйте пространства через меню действий, чтобы не потерять изменения.',
     );
