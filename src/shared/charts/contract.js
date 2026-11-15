@@ -11,9 +11,11 @@ export const TEMPLATES = Object.freeze([
   'waterfall',
   'funnel',
   'heatmap',
+  'indicator',
+  'sankey',
 ]);
-const extraFields = { tree: 'parent', waterfall: 'stepType', heatmap: 'category' };
-const singleSeries = ['pie', 'tree', 'waterfall', 'funnel', 'heatmap'];
+const extraFields = { tree: 'parent', waterfall: 'stepType', heatmap: 'category', sankey: 'target' };
+const singleSeries = ['pie', 'tree', 'waterfall', 'funnel', 'heatmap', 'sankey'];
 export const isNumeric = (unit) => !['month', 'text'].includes(unit);
 const text = (s, max = 160) => typeof s === 'string' && s.trim().length > 0 && s.length <= max;
 function keys(object, allowed) {
@@ -39,6 +41,7 @@ export function validateChart(raw, catalog = datasets) {
     'pointLabel',
     'localFilters',
     'totals',
+    'aggregation',
     ...Object.values(extraFields),
   ]);
   if (!/^C\d{2}$/.test(raw.id) || !text(raw.title, 90) || !text(raw.question, 300))
@@ -68,7 +71,30 @@ export function validateChart(raw, catalog = datasets) {
       fields[raw[extra]].unit !== 'text')
   )
     throw new Error('Некорректные поля шаблона');
-  if (raw.template === 'table') {
+  if (raw.template !== 'indicator' && raw.aggregation !== undefined)
+    throw new Error('Агрегация поддерживается только индикатором');
+  if (raw.template === 'indicator') {
+    if (
+      raw.dimension !== undefined ||
+      raw.pointLabel !== undefined ||
+      raw.columns !== undefined ||
+      raw.totals !== undefined ||
+      raw.columnBars !== undefined ||
+      !Array.isArray(raw.series) ||
+      raw.series.length !== 1
+    )
+      throw new Error('Индикатор требует одну числовую серию без измерения');
+    keys(raw.series[0], ['field']);
+    if (!validField(raw.series[0].field) || !isNumeric(fields[raw.series[0].field].unit))
+      throw new Error('Индикатор требует числовое поле');
+    if (
+      raw.aggregation !== undefined &&
+      !['sum', 'avg', 'min', 'max'].includes(raw.aggregation)
+    )
+      throw new Error('Неизвестная агрегация индикатора');
+    if (raw.aggregation === 'sum' && fields[raw.series[0].field].unit === 'percent')
+      throw new Error('Нельзя суммировать процентные показатели');
+  } else if (raw.template === 'table') {
     if (
       raw.pointLabel !== undefined ||
       raw.dimension !== undefined ||
@@ -131,10 +157,12 @@ export function validateChart(raw, catalog = datasets) {
     if (singleSeries.includes(raw.template) && raw.series.length !== 1)
       throw new Error('Шаблон требует одну числовую серию');
     if (
-      ['pie', 'tree', 'waterfall', 'funnel'].includes(raw.template) &&
+      ['pie', 'tree', 'waterfall', 'funnel', 'sankey'].includes(raw.template) &&
       fields[raw.dimension].unit !== 'text'
     )
       throw new Error('Шаблон требует текстовую категорию');
+    if (raw.template === 'sankey' && fields[raw.target].unit !== 'text')
+      throw new Error('Sankey требует текстовое поле целевого сегмента');
     if (raw.template === 'scatter' && !isNumeric(fields[raw.dimension].unit))
       throw new Error('Точечная диаграмма требует числовую ось X');
     if (extra && new Set([raw.dimension, raw[extra], raw.series[0].field]).size !== 3)
@@ -157,13 +185,20 @@ export function tableFields(definition) {
 }
 
 function validateStructure(rows, definition, fields) {
-  const { template, dimension, parent, category, stepType } = definition;
-  if (!['tree', 'waterfall', 'funnel', 'heatmap'].includes(template) || !rows.length) return;
+  const { template, dimension, parent, category, stepType, target } = definition;
+  if (template === 'indicator') {
+    if (!definition.aggregation && rows.length > 1)
+      throw new Error('Индикатор без агрегации требует ровно одну строку');
+    return;
+  }
+  if (!['tree', 'waterfall', 'funnel', 'heatmap', 'sankey'].includes(template) || !rows.length)
+    return;
 
   const metric = definition.series[0].field;
   const categoryValue = (value, field) =>
     isNumeric(fields[field].unit) ? Number(value) : String(value);
-  const dimensions = template === 'heatmap' ? [dimension, category] : [dimension];
+  const dimensions =
+    template === 'heatmap' ? [dimension, category] : template === 'sankey' ? [dimension, target] : [dimension];
   const seen = new Set();
   for (const row of rows) {
     if (dimensions.some((field) => row[field] == null || row[field] === ''))
@@ -171,6 +206,15 @@ function validateStructure(rows, definition, fields) {
     const key = JSON.stringify(dimensions.map((field) => categoryValue(row[field], field)));
     if (seen.has(key)) throw new Error('Категории графика должны быть уникальны');
     seen.add(key);
+  }
+
+  if (template === 'sankey') {
+    const sources = new Set(rows.map((row) => String(row[dimension])));
+    const targets = new Set(rows.map((row) => String(row[target])));
+    if (rows.length > 100 || sources.size > 12 || targets.size > 12)
+      throw new Error('Sankey: максимум 100 связей и 12 сегментов на каждой стороне');
+    if (rows.some((row) => row[metric] == null || row[metric] === '' || Number(row[metric]) < 0))
+      throw new Error('Sankey требует неотрицательные числовые значения потоков');
   }
 
   if (template === 'tree') {
