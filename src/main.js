@@ -4,13 +4,18 @@ import { ChartManager } from './shared/charts/ChartManager.js';
 import { DataClient } from './shared/data/DataClient.js';
 import { FilterStore } from './shared/filters/FilterStore.js';
 import { GridManager } from './layout/GridManager.js';
+import { WorkspaceStore, validateWorkspace } from './layout/WorkspaceStore.js';
+import sharedWorkspace from './layout/workspace.json?raw';
 import {
-  WorkspaceStore,
-  WORKSPACE_KEY,
-  createWorkspace,
-  loadWorkspace,
-  validateWorkspace,
-} from './layout/WorkspaceStore.js';
+  ACTIVE_KEY,
+  DRAFT_KEY,
+  loadDraft,
+  sameLayout,
+  validatePublishedWorkspace,
+  workspaceBlobSha,
+} from './layout/PublishedWorkspace.js';
+import { initWorkspacePublishing } from './layout/WorkspacePublishingUI.js';
+import { validateLocalFilters } from './shared/filters/LocalFilters.js';
 import { validateLayout } from './layout/LayoutStorage.js';
 import { datasets } from './shared/data/datasets.js';
 import { initTheme } from './shared/ui/theme.js';
@@ -22,17 +27,40 @@ const filters = new FilterStore();
 const data = new DataClient();
 const charts = new ChartManager(data, filters);
 initTheme(document.getElementById('theme-toggle'), () => charts.applyTheme());
+const reloadCharts = byId('reload-charts');
+reloadCharts.append(createIcon('refresh'));
+reloadCharts.addEventListener('click', async () => {
+  reloadCharts.disabled = true;
+  try {
+    await charts.reloadAll();
+  } finally {
+    reloadCharts.disabled = false;
+  }
+});
 let storage;
 try {
   storage = window.localStorage;
 } catch {
   /* blocked storage remains explicit in UI */
 }
-// Keep the existing starter layout lightweight; newly added charts enter via the catalogue.
-const starter = ChartRegistry.list().filter((chart) => ['C03', 'C18'].includes(chart.id));
-const loaded = loadWorkspace(createWorkspace(starter), known, storage);
-const store = new WorkspaceStore(loaded.state, known);
+const VIEW_FILTERS_KEY = 'zetflix.view-filters.v1';
+let personalFilters = {};
+let selected;
+try {
+  const value = JSON.parse(storage?.getItem(VIEW_FILTERS_KEY) || '{}');
+  if (value && typeof value === 'object' && !Array.isArray(value)) personalFilters = value;
+  selected = storage?.getItem(ACTIVE_KEY);
+} catch {
+  // A blocked storage area only affects personal preferences.
+}
+const published = validatePublishedWorkspace(JSON.parse(sharedWorkspace), known, selected);
+const publishedSha = await workspaceBlobSha(sharedWorkspace);
+const loaded = loadDraft(published, publishedSha, known, storage);
+let draftStore = loaded.state ? new WorkspaceStore(loaded.state, known) : null;
+let draftBase = loaded.base || publishedSha;
+let submittedSha = loaded.submittedSha;
 let recovery = Boolean(loaded.recovery);
+let store = new WorkspaceStore(published, known);
 let editing = false;
 let naming = 'create';
 let headingEditingId = null;
@@ -42,7 +70,18 @@ let saved = false;
 const grid = new GridManager(
   byId('dashboard-grid'),
   charts,
-  (layout) => {
+  (layout, filter) => {
+    if (!editing) {
+      if (filter) {
+        personalFilters[store.state.activeId + '/' + filter.instanceId] = filter.localFilters;
+        try {
+          storage?.setItem(VIEW_FILTERS_KEY, JSON.stringify(personalFilters));
+        } catch {
+          // The filter still applies in this tab.
+        }
+      }
+      return;
+    }
     try {
       store.changeActive({ widgets: layout.widgets });
       persist();
@@ -68,13 +107,17 @@ function flush() {
   clearTimeout(saveTimer);
   try {
     if (recovery) {
-      const original = storage.getItem(WORKSPACE_KEY);
-      if (original) storage.setItem(WORKSPACE_KEY + '.recovery.' + Date.now(), original);
+      const original = storage.getItem(DRAFT_KEY);
+      if (original) storage.setItem(DRAFT_KEY + '.recovery.' + Date.now(), original);
       recovery = false;
     }
-    storage.setItem(WORKSPACE_KEY, JSON.stringify(store.current()));
+    if (!draftStore) return;
+    storage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({ state: draftStore.current(), base: draftBase, submittedSha }),
+    );
     saved = true;
-    byId('save-state').textContent = 'Сохранено в браузере';
+    byId('save-state').textContent = editing ? 'Черновик в браузере' : 'Общий макет';
   } catch {
     byId('save-state').textContent = 'Не сохранено';
     message(
@@ -83,6 +126,9 @@ function flush() {
   }
 }
 function syncControls() {
+  byId('publish-workspace').disabled =
+    !editing || (draftBase === publishedSha && sameLayout(store.state, published));
+  byId('reset-draft').hidden = !editing || draftBase === publishedSha;
   byId('undo-btn').disabled = !store.past.length;
   byId('redo-btn').disabled = !store.future.length;
   const active = store.active();
@@ -114,7 +160,15 @@ function renderTabs() {
     button.tabIndex = space.id === store.state.activeId ? 0 : -1;
     button.addEventListener('click', () => {
       store.select(space.id);
-      persist();
+      if (editing) persist();
+      else {
+        selected = space.id;
+        try {
+          storage?.setItem(ACTIVE_KEY, selected);
+        } catch {
+          // The selection still works in this tab.
+        }
+      }
       render();
       byId(button.id)?.focus();
     });
@@ -147,17 +201,67 @@ byId('space-tabs').addEventListener('keydown', (event) => {
 });
 function render() {
   renderTabs();
-  grid.replace({ version: 1, dashboardId: 'current', widgets: store.active()?.widgets || [] });
+  const space = store.active();
+  const widgets = (space?.widgets || []).map((widget) => {
+    const local = personalFilters[space.id + '/' + widget.instanceId];
+    if (editing || !widget.chartId || !local) return widget;
+    try {
+      return { ...widget, localFilters: validateLocalFilters(known(widget.chartId), local) };
+    } catch {
+      return widget;
+    }
+  });
+  grid.replace({ version: 1, dashboardId: 'current', widgets });
   syncControls();
 }
 function setEditing(value) {
+  if (editing === value) return;
+  if (value) {
+    draftStore ??= new WorkspaceStore(store.current(), known);
+    store = draftStore;
+  } else {
+    if (!saved) flush();
+    store = new WorkspaceStore(
+      validatePublishedWorkspace(JSON.parse(sharedWorkspace), known, selected),
+      known,
+    );
+  }
   editing = value;
   grid.setEditing(editing);
   byId('editor-bar').hidden = !editing;
   byId('edit-btn').textContent = editing ? 'Готово' : 'Настроить';
   byId('edit-btn').setAttribute('aria-pressed', String(editing));
+  byId('save-state').textContent = editing ? 'Черновик в браузере' : 'Общий макет';
+  if (editing && draftBase !== publishedSha)
+    message('Черновик сделан на старом макете. Экспортируйте его или откройте новый общий макет.');
+  render();
 }
 byId('edit-btn').addEventListener('click', () => setEditing(!editing));
+byId('reset-draft').addEventListener('click', () =>
+  confirm(
+    'Открыть новый общий макет?',
+    'Текущий черновик будет скачан как JSON. Перенесите нужные изменения в новый макет вручную.',
+    () => {
+      exportWorkspace();
+      draftBase = publishedSha;
+      submittedSha = undefined;
+      draftStore = new WorkspaceStore(published, known);
+      store = draftStore;
+      persist();
+      message('');
+      render();
+    },
+  ),
+);
+initWorkspacePublishing({
+  storage,
+  publishedSha,
+  draft: () => ({ state: draftStore.current(), base: draftBase }),
+  markSubmitted: (blob) => {
+    submittedSha = blob;
+    flush();
+  },
+});
 for (const [id, name] of [
   ['undo-btn', 'undo'],
   ['redo-btn', 'redo'],
@@ -203,6 +307,8 @@ byId('heading-form').addEventListener('submit', (event) => {
 byId('heading-text').addEventListener('input', (event) => event.target.setCustomValidity(''));
 
 function openName(mode) {
+  if (!editing) setEditing(true);
+  if (mode === 'rename' && !store.active()) return;
   naming = mode;
   byId('space-dialog-title').textContent =
     mode === 'create' ? 'Новое пространство' : 'Переименовать пространство';
@@ -240,7 +346,9 @@ byId('confirm-dialog').addEventListener('close', () => {
   if (byId('confirm-dialog').returnValue === 'confirm') confirmAction?.();
   confirmAction = null;
 });
-byId('delete-space').addEventListener('click', () =>
+byId('delete-space').addEventListener('click', () => {
+  if (!editing) setEditing(true);
+  if (!store.active()) return;
   confirm(
     'Удалить «' + store.active().title + '»?',
     'Графики останутся в каталоге. Удаление пространства можно отменить в настройке макета.',
@@ -249,8 +357,8 @@ byId('delete-space').addEventListener('click', () =>
       persist();
       render();
     },
-  ),
-);
+  );
+});
 function history(direction) {
   store[direction]();
   persist();
@@ -278,9 +386,11 @@ function openCatalog() {
   byId('catalog-search').focus();
 }
 byId('add-btn').addEventListener('click', openCatalog);
-byId('empty-action').addEventListener('click', () =>
-  store.active() ? openCatalog() : openName('create'),
-);
+byId('empty-action').addEventListener('click', () => {
+  setEditing(true);
+  if (store.active()) openCatalog();
+  else openName('create');
+});
 for (const chart of ChartRegistry.list()) {
   const button = document.createElement('button');
   button.type = 'button';
@@ -344,7 +454,7 @@ function filterCatalog(value) {
 }
 byId('catalog-search').addEventListener('input', (event) => filterCatalog(event.target.value));
 initPeriodPicker(byId('period-picker').parentElement, filters, message);
-byId('export-btn').addEventListener('click', () => {
+function exportWorkspace() {
   const url = URL.createObjectURL(
     new Blob([JSON.stringify(store.current(), null, 2)], { type: 'application/json' }),
   );
@@ -353,7 +463,8 @@ byId('export-btn').addEventListener('click', () => {
   link.download = 'zetflix-workspaces.json';
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-});
+}
+byId('export-btn').addEventListener('click', exportWorkspace);
 byId('import-btn').addEventListener('click', () => byId('import-file').click());
 byId('import-file').addEventListener('change', async (event) => {
   const file = event.target.files[0];
@@ -369,11 +480,14 @@ byId('import-file').addEventListener('change', async (event) => {
         spaces: [{ id: 'imported', title: old.title, widgets: old.widgets }],
       };
     }
-    const state = validateWorkspace(incoming, known);
+    const state = Object.hasOwn(incoming, 'previousBlobSha')
+      ? validatePublishedWorkspace(incoming, known)
+      : validateWorkspace(incoming, known);
     confirm(
       'Импортировать пространства?',
       'Текущие пространства будут заменены. Это действие можно отменить в настройке макета.',
       () => {
+        setEditing(true);
         store.commit(state);
         persist();
         render();
@@ -386,13 +500,13 @@ byId('import-file').addEventListener('change', async (event) => {
   }
 });
 window.addEventListener('storage', (event) => {
-  if (event.key === WORKSPACE_KEY)
+  if (event.key === DRAFT_KEY)
     message(
       'Пространства изменены в другой вкладке. Экспортируйте текущую версию перед перезагрузкой, если хотите её сохранить.',
     );
 });
 window.addEventListener('beforeunload', (event) => {
-  if (!saved && store.past.length) {
+  if (!saved && draftStore) {
     flush();
     if (!saved) {
       event.preventDefault();
@@ -402,12 +516,12 @@ window.addEventListener('beforeunload', (event) => {
 });
 window.addEventListener('pagehide', (event) => {
   if (!event.persisted) {
-    if (store.past.length) flush();
+    if (!saved && draftStore) flush();
     charts.dispose();
     grid.dispose();
     void data.dispose();
   }
 });
 render();
-byId('save-state').textContent = 'Макет в этом браузере';
+byId('save-state').textContent = 'Общий макет';
 if (loaded.warning) message(loaded.warning);

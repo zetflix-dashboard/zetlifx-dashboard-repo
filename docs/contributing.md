@@ -9,18 +9,11 @@
 
 Ручное review не является обязательным правилом проекта. PR нужен как проверяемый diff и точка запуска CI, а не как обязательная кнопка одобрения человеком. Не писать напрямую в main и не force-push общую ветку.
 
-## Рекомендуемая настройка GitHub (отдельно от файлов)
-На момент аудита 2026-11-14 main был `protected: false`, rulesets отсутствовали. Изменение файла workflow не включает защиту ветки.
+## Настройка GitHub для командной публикации
 
-Для main создать активное правило:
-- Require a pull request before merging; required approvals = 0 (без обязательного человеческого review).
-- Require status checks `scope` (workflow Scope changes) и `check` (workflow Check dashboard), требовать актуальную базу.
-- Запретить force push и удаление main. Не задавать обходы для обычной разработки.
-- По желанию включить Allow auto-merge в General. Тогда агент включает auto-merge PR и GitHub ждёт checks. Если настройки auto-merge недоступны, агент может дождаться checks и выполнить обычный merge с проверкой head SHA.
+После установки workflow в main примените правила из `.github/main-ruleset.json`. Правило требует PR, успешные `scope` и `check` от GitHub Actions, очередь слияния и ноль обязательных ручных одобрений. Очередь проверяет и сливает по одному PR с методом **Merge commit**. Она применяется ко всем PR в main. Для обычного PR после проверок используйте **Merge when ready** (либо `gh pr merge`), а редактор макета запрашивает это автоматически.
 
-Проверка scope доверяет коду base-ветки: `pull_request_target` используется только для чтения diff, никогда для установки зависимостей/запуска кода PR. Первое добавление scope workflow начнёт работать после merge в main; это явная bootstrap-граница. Build/browser job работает на PR merge ref с read-only правами.
-
-Не добавлять workflow, который автоматически выполняет любой admin-PR с write-token. Режим admin — декларация намерения, не подтверждение полномочий. Для автоматического merge остаются GitHub-права, заданная пользователем область работы и успешные проверки.
+`scope` выполняет код из базового коммита и читает proposed diff как данные. На событии `merge_group` он сверяет номер PR с родителями кандидата и проверяет тот же scope на актуальной базе. Ветки `admin/layout-*` могут менять только `src/layout/workspace.json`. Любое изменение этого JSON содержит SHA blob предыдущей версии, а сравнение повторно выполняется для кандидата очереди. `check` проверяет полный макет по текущему каталогу и запускает сборку и тесты на кандидате очереди с правами чтения.
 
 ## Ограничения среды
 Инструкции репозитория не отключают системные подтверждения Codex, ограничения подключения и защиты GitHub. Если текущий инструмент не может менять repository settings, это сообщается явно; наличие документа не выдаётся за включённый ruleset.
@@ -33,11 +26,11 @@
 
 
 ## Готовая конфигурация защиты
-В `.github/main-ruleset.json` сохранён ruleset с двумя required checks, нулём обязательных approvals и запретом force-push/удаления main. Он подготовлен, но не применяется самим наличием в репозитории. После merge workflow и появления обоих checks администратор может выполнить из checkout:
+В `.github/main-ruleset.json` сохранён ruleset с очередью слияния, двумя required checks, нулём обязательных approvals и запретом force-push/удаления main. Он подготовлен, но не применяется самим наличием в репозитории. После merge workflow и появления обоих checks администратор может выполнить из checkout:
 
 ```sh
 gh api --method POST repos/zetflix-dashboard/zetlifx-dashboard-repo/rulesets --input .github/main-ruleset.json
 gh api --method PATCH repos/zetflix-dashboard/zetlifx-dashboard-repo -F allow_auto_merge=true
 ```
 
-Нужен уже авторизованный GitHub CLI с Administration:write; токены в файлы не помещать. При существующем одноимённом ruleset обновлять его по ID, а не создавать копию. [Схема GitHub API](https://docs.github.com/en/rest/repos/rules#create-a-repository-ruleset).
+Эти шаги также доступны в GitHub Settings → Rules → Rulesets (импорт JSON) и Settings → General → Pull Requests. Нужен уже авторизованный GitHub CLI с Administration:write; токены в файлы не помещать. При существующем одноимённом ruleset обновлять его по ID, а не создавать копию. [Схема GitHub API](https://docs.github.com/en/rest/repos/rules#create-a-repository-ruleset).

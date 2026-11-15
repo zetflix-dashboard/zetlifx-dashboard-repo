@@ -102,7 +102,7 @@ export class ChartManager {
     if (s.rows?.length) this.draw(s);
     return s.table;
   }
-  async refreshOne(id) {
+  async refreshOne(id, force = false) {
     const s = this.sessions.get(id);
     if (!s) return;
     s.controller?.abort();
@@ -122,9 +122,14 @@ export class ChartManager {
         dataset.sql,
         datasetQueryParams(s.definition, this.filters.get(), s.localFilters),
         controller.signal,
+        {
+          definition: s.definition,
+          force,
+          validate: (result) => validateRows(result, s.definition),
+        },
       );
       if (this.sessions.get(id) !== s || request !== s.request) return;
-      s.rows = validateRows(rows, s.definition);
+      s.rows = rows;
       if (!rows.length) {
         s.overlay.textContent = 'За выбранный период нет данных';
         return;
@@ -164,6 +169,11 @@ export class ChartManager {
     for (const [id, session] of this.sessions) {
       if (datasets[session.definition.dataset].filters.includes('period')) void this.refreshOne(id);
     }
+  }
+  async reloadAll() {
+    const clearing = this.data.clearCache();
+    const refreshing = [...this.sessions.keys()].map((id) => this.refreshOne(id));
+    await Promise.all([clearing, ...refreshing]);
   }
   resizeAll() {
     for (const s of this.sessions.values()) s.chart?.resize();

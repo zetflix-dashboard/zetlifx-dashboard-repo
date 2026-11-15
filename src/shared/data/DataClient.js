@@ -1,3 +1,5 @@
+import { QueryCache } from './QueryCache.js';
+import versions from 'virtual:parquet-versions';
 import * as duckdb from '@duckdb/duckdb-wasm';
 import mvpWasm from '@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url';
 import mvpWorker from '@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?url';
@@ -20,6 +22,7 @@ export class DataClient {
     this.tail = Promise.resolve();
     this.cache = new Map();
     this.cacheLimit = 40;
+    this.persistent = new QueryCache(this.cacheLimit);
     this.closed = false;
   }
 
@@ -53,8 +56,9 @@ export class DataClient {
     }
     if (!this.registered.has(name)) {
       const promise = (async () => {
-        const url = new URL(import.meta.env.BASE_URL + 'data/' + name, window.location.origin).href;
-        await this.db.registerFileURL(name, url, duckdb.DuckDBDataProtocol.HTTP, false);
+        const url = new URL(import.meta.env.BASE_URL + 'data/' + name, window.location.origin);
+        if (versions[name]) url.searchParams.set('v', versions[name]);
+        await this.db.registerFileURL(name, url.href, duckdb.DuckDBDataProtocol.HTTP, false);
       })();
       this.registered.set(name, promise);
       promise.catch(() => this.registered.delete(name));
@@ -62,19 +66,36 @@ export class DataClient {
     return this.registered.get(name);
   }
 
-  query(files, sql, params = [], signal) {
+  remember(key, rows) {
+    this.cache.delete(key);
+    this.cache.set(key, rows);
+    if (this.cache.size > this.cacheLimit) this.cache.delete(this.cache.keys().next().value);
+  }
+
+  query(files, sql, params = [], signal, { definition, force = false, validate } = {}) {
     if (this.closed) return Promise.reject(new Error('Data client is closed'));
     if (signal?.aborted) return Promise.reject(new DOMException('Query superseded', 'AbortError'));
     const key = JSON.stringify([
-      files,
+      definition,
+      files.map((name) => [name, versions[name]]),
       sql,
       params,
-      import.meta.env.VITE_DATA_VERSION || 'snapshot-2025',
+      import.meta.env.VITE_DATA_VERSION || null,
     ]);
-    if (this.cache.has(key)) return Promise.resolve(this.cache.get(key));
-    const run = async () => {
+    const persist = files.every((name) => versions[name]);
+    const assertCurrent = () => {
       if (signal?.aborted) throw new DOMException('Query superseded', 'AbortError');
-      if (this.cache.has(key)) return this.cache.get(key);
+    };
+    const run = async () => {
+      assertCurrent();
+      if (!force) {
+        const cached = this.cache.get(key) ?? (persist ? await this.persistent.read(key) : null);
+        assertCurrent();
+        if (Array.isArray(cached)) {
+          this.remember(key, cached);
+          return cached;
+        }
+      }
       await this.init();
       for (const name of files) await this.ensureFile(name);
       if (signal?.aborted) throw new DOMException('Query superseded', 'AbortError');
@@ -90,10 +111,11 @@ export class DataClient {
         result = await this.conn.query(sql);
       }
       // DuckDB-Wasm cannot reliably interrupt a running query. Discard stale results.
-      if (signal?.aborted) throw new DOMException('Query superseded', 'AbortError');
-      const rows = result.toArray().map((row) => row.toJSON());
-      this.cache.set(key, rows);
-      if (this.cache.size > this.cacheLimit) this.cache.delete(this.cache.keys().next().value);
+      assertCurrent();
+      const raw = result.toArray().map((row) => row.toJSON());
+      const rows = validate ? validate(raw) : raw;
+      this.remember(key, rows);
+      if (persist) await this.persistent.write(key, rows);
       return rows;
     };
     const pending = this.tail.then(run).catch(async (error) => {
@@ -117,7 +139,11 @@ export class DataClient {
   }
 
   clearCache() {
-    this.cache.clear();
+    this.tail = this.tail.then(async () => {
+      this.cache.clear();
+      await this.persistent.clear();
+    });
+    return this.tail;
   }
 
   async dispose() {

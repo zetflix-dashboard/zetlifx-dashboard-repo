@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-const key = 'zetflix.workspaces.v2';
+const key = 'zetflix.workspace-draft.v1';
 test.beforeEach(async ({ page }) => {
   page.on('pageerror', (error) => console.error('Browser exception:', error.message));
   page.on('console', (entry) => {
@@ -41,9 +41,13 @@ test('dynamic spaces persist, rename, delete, undo and keyboard navigation', asy
   await page.locator('.catalog-option').first().click();
   await expect(page.locator('.grid-stack-item')).toHaveCount(1);
   await expect
-    .poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key))?.spaces.length, key))
+    .poll(() =>
+      page.evaluate((key) => JSON.parse(localStorage.getItem(key))?.state.spaces.length, key),
+    )
     .toBe(2);
   await page.reload();
+  await expect(page.getByRole('tab', { name: 'Контент' })).toHaveCount(0);
+  await page.locator('#edit-btn').click();
   await expect(page.getByRole('tab', { name: 'Контент' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('.grid-stack-item')).toHaveCount(1);
   await page.locator('.app-menu summary').click();
@@ -53,7 +57,6 @@ test('dynamic spaces persist, rename, delete, undo and keyboard navigation', asy
   await page.locator('#delete-space').click();
   await page.locator('#confirm-dialog button[value="confirm"]').click();
   await expect(page.getByRole('tab')).toHaveCount(1);
-  await page.locator('#edit-btn').click();
   await page.locator('#undo-btn').click();
   await expect(page.getByRole('tab', { name: 'Финансы' })).toBeVisible();
   await page.getByRole('tab', { name: 'Финансы' }).focus();
@@ -71,7 +74,10 @@ test('mobile uses full width and saves canonical layout across resize', async ({
   await page.keyboard.press('Shift+ArrowDown');
   await expect
     .poll(() =>
-      page.evaluate((key) => JSON.parse(localStorage.getItem(key))?.spaces[0].widgets[0].h, key),
+      page.evaluate(
+        (key) => JSON.parse(localStorage.getItem(key))?.state.spaces[0].widgets[0].h,
+        key,
+      ),
     )
     .toBe(6);
   await page.setViewportSize({ width: 390, height: 844 });
@@ -82,6 +88,7 @@ test('mobile uses full width and saves canonical layout across resize', async ({
   await page.locator('#edit-btn').click();
   await page.screenshot({ path: 'test-results/dashboard-mobile.png', fullPage: true });
   await page.reload();
+  await page.locator('#edit-btn').click();
   await expect(page.locator('.widget-chart canvas')).toHaveCount(2);
   await expect(page.locator('#dashboard-grid')).toHaveClass(/gs-1\b/);
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -98,16 +105,21 @@ test('cards added on mobile keep desktop width after reload', async ({ page }) =
   await expect(page.locator('.grid-stack-item')).toHaveCount(3);
   await expect
     .poll(() =>
-      page.evaluate((key) => JSON.parse(localStorage.getItem(key))?.spaces[0].widgets.length, key),
+      page.evaluate(
+        (key) => JSON.parse(localStorage.getItem(key))?.state.spaces[0].widgets.length,
+        key,
+      ),
     )
     .toBe(3);
   expect(
     await page.evaluate(
-      (key) => JSON.parse(localStorage.getItem(key)).spaces[0].widgets.map((widget) => widget.w),
+      (key) =>
+        JSON.parse(localStorage.getItem(key)).state.spaces[0].widgets.map((widget) => widget.w),
       key,
     ),
   ).toEqual([6, 6, 6]);
   await page.reload();
+  await page.locator('#edit-btn').click();
   await expect(page.locator('.grid-stack-item')).toHaveCount(3);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await expect(page.locator('#dashboard-grid')).toHaveClass(/gs-12\b/);
@@ -123,6 +135,8 @@ test('legacy empty layout is kept and malformed import does not replace work', a
     ),
   );
   await page.goto('./');
+  await expect(page.getByRole('tab', { name: 'Мой дашборд' })).toBeVisible();
+  await page.locator('#edit-btn').click();
   await expect(page.locator('#empty-layout')).toBeVisible();
   await expect(page.locator('.grid-stack-item')).toHaveCount(0);
   await page.locator('#import-file').setInputFiles({
@@ -288,7 +302,7 @@ test('floating editor supports semantic headings, persistence and undo', async (
     .poll(() =>
       page.evaluate(
         (key) =>
-          JSON.parse(localStorage.getItem(key) || 'null')?.spaces?.[0]?.widgets?.find(
+          JSON.parse(localStorage.getItem(key) || 'null')?.state.spaces?.[0]?.widgets?.find(
             (w) => w.type === 'heading',
           )?.title,
         key,
@@ -304,6 +318,8 @@ test('floating editor supports semantic headings, persistence and undo', async (
   await page.locator('#edit-btn').click();
   await expect(page.locator('.heading-controls')).toBeHidden();
   await page.reload();
+  await expect(page.locator('.heading-title')).toHaveCount(0);
+  await page.locator('#edit-btn').click();
   await expect(page.locator('.heading-title')).toHaveText('Важные показатели');
   await expect(page.locator('.widget-chart canvas')).toHaveCount(2);
 });
@@ -342,17 +358,18 @@ test('local filters are isolated by widget and saved with the workspace', async 
     .poll(() =>
       page.evaluate(
         (key) =>
-          JSON.parse(localStorage.getItem(key)).spaces[0].widgets.find((w) => w.chartId === 'C14')
-            ?.localFilters?.genre,
+          JSON.parse(localStorage.getItem(key)).state.spaces[0].widgets.find(
+            (w) => w.chartId === 'C14',
+          )?.localFilters?.genre,
         key,
       ),
     )
     .toBe('Драма');
   await expect(cards.locator('.widget-overlay:visible')).toHaveCount(0, { timeout: 120000 });
   await page.locator('#edit-btn').click();
-  await expect(selector).toHaveValue('Драма');
-  await expect(page.locator('.widget-chart canvas')).toHaveCount(3);
+  await expect(selector).toHaveCount(0);
   await page.reload();
+  await page.locator('#edit-btn').click();
   await expect(cards.locator('.widget-filter-select')).toHaveValue('Драма');
 });
 
@@ -430,9 +447,9 @@ test('C03 quarter is a per-card filter and the system renders a subtle inline C-
     .poll(() =>
       page.evaluate(
         () =>
-          JSON.parse(
-            localStorage.getItem('zetflix.workspaces.v2') || 'null',
-          )?.spaces?.[0]?.widgets?.find((w) => w.chartId === 'C03')?.localFilters?.quarter,
+          JSON.parse(localStorage.getItem('zetflix.view-filters.v1') || '{}')?.[
+            'initial/c03-initial'
+          ]?.quarter,
       ),
     )
     .toBe('1');
@@ -442,5 +459,144 @@ test('C03 quarter is a per-card filter and the system renders a subtle inline C-
   );
   await expect(page.locator('[data-instance-id="c03-initial"] .widget-chart canvas')).toHaveCount(
     1,
+  );
+});
+
+test('refresh controls recompute SQL while an ordinary reload restores cached rows', async ({
+  page,
+}) => {
+  test.setTimeout(120000);
+  await ready(page);
+  const fetched = [];
+  page.on('request', (request) => {
+    if (/\.wasm(?:$|\?)|\.parquet(?:$|\?)/.test(request.url())) fetched.push(request.url());
+  });
+  await page.reload();
+  await expect(page.locator('.widget-chart canvas')).toHaveCount(2);
+  await expect(page.locator('.widget-overlay:visible')).toHaveCount(0);
+  expect(fetched).toEqual([]);
+  const single = page.locator('[data-instance-id="c03-initial"] .widget-refresh');
+  await expect(single.locator('svg')).toHaveCount(1);
+  await expect(single).toHaveText('');
+  await page.locator('#edit-btn').click();
+  await expect(single).toBeHidden();
+  await page.locator('#edit-btn').click();
+  await expect(page.locator('.widget-overlay:visible')).toHaveCount(0);
+  await single.click();
+  await expect(page.locator('.widget-overlay:visible')).toHaveCount(0);
+  expect(fetched.some((url) => url.includes('pl_control.parquet'))).toBe(true);
+  const all = page.getByRole('button', { name: 'Перезагрузить все графики' });
+  await all.click();
+  await expect(all).toBeEnabled();
+  await expect(page.locator('.widget-overlay:visible')).toHaveCount(0);
+  expect(fetched.some((url) => url.includes('ad_revenue.parquet'))).toBe(true);
+});
+
+test('publication resumes a created PR after a network error and never stores the token in web storage', async ({
+  page,
+}) => {
+  const { readFile } = await import('node:fs/promises');
+  const { workspaceBlobSha } = await import('../../src/layout/PublishedWorkspace.js');
+  const original = await readFile(
+    new URL('../../src/layout/workspace.json', import.meta.url),
+    'utf8',
+  );
+  const base = await workspaceBlobSha(original);
+  const current = '1'.repeat(40);
+  const head = '2'.repeat(40);
+  const prefix = '/repos/zetflix-dashboard/zetlifx-dashboard-repo';
+  const updates = [];
+  let branch;
+  let pull;
+  let blob;
+  let auto = 0;
+  await page.route('https://api.github.com/**', async (route) => {
+    const req = route.request();
+    const url = new URL(req.url());
+    const path = url.pathname;
+    const method = req.method();
+    if (method === 'OPTIONS')
+      return route.fulfill({
+        status: 204,
+        headers: {
+          'access-control-allow-origin': '*',
+          'access-control-allow-headers': 'authorization,content-type,x-github-api-version',
+          'access-control-allow-methods': 'GET,POST,PUT',
+        },
+      });
+    const send = (json, status = 200) =>
+      route.fulfill({ json, status, headers: { 'access-control-allow-origin': '*' } });
+    if (path === prefix + '/rules/branches/main')
+      return send([
+        { type: 'pull_request' },
+        {
+          type: 'merge_queue',
+          parameters: { merge_method: 'MERGE', max_entries_to_build: 1, max_entries_to_merge: 1 },
+        },
+        {
+          type: 'required_status_checks',
+          parameters: { required_status_checks: [{ context: 'scope' }, { context: 'check' }] },
+        },
+      ]);
+    if (path === prefix + '/git/ref/heads/main') return send({ object: { sha: current } });
+    if (path === prefix + '/git/refs') {
+      branch = req.postDataJSON().ref.replace('refs/heads/', '');
+      return send({ object: { sha: current } });
+    }
+    if (path.startsWith(prefix + '/git/ref/heads/')) return send({}, 404);
+    if (path === prefix + '/contents/src/layout/workspace.json') {
+      if (method === 'PUT') {
+        const body = req.postDataJSON();
+        const text = Buffer.from(body.content, 'base64').toString('utf8');
+        updates.push({ body, json: JSON.parse(text) });
+        blob = await workspaceBlobSha(text);
+        return send({});
+      }
+      return send({ sha: url.searchParams.get('ref') === head ? blob : base });
+    }
+    if (path === prefix + '/pulls' && method === 'GET') return send(pull ? [pull] : []);
+    if (path === prefix + '/pulls' && method === 'POST') {
+      expect(req.postDataJSON()).toMatchObject({
+        head: branch,
+        base: 'main',
+        body: expect.stringContaining('mode: admin'),
+      });
+      pull = { number: 42, state: 'open', node_id: 'PR_42', head: { sha: head } };
+      return send(pull);
+    }
+    if (path === prefix + '/pulls/42') return send(pull);
+    if (path === '/graphql') {
+      auto++;
+      if (auto === 1) return route.abort();
+      expect(req.postDataJSON().variables).toEqual({ id: 'PR_42', sha: head });
+      return send({ data: { enablePullRequestAutoMerge: { pullRequest: { id: 'PR_42' } } } });
+    }
+    return send({ message: 'Unexpected path ' + path }, 400);
+  });
+  await ready(page);
+  await page.locator('#edit-btn').click();
+  await page.locator('#add-heading-btn').click();
+  await page.locator('#heading-text').fill('Общий заголовок');
+  await page.locator('#heading-form button[type="submit"]').click();
+  await page.locator('#publish-workspace').click();
+  await page.locator('#github-login').fill('editor');
+  await page.locator('#github-token').fill('github_pat_test_token');
+  await page.locator('#confirm-publish').click();
+  await expect(page.locator('#publish-error')).not.toBeEmpty();
+  await expect(page.locator('#publication-link')).toHaveAttribute('href', /\/pull\/42$/);
+  await page.locator('#confirm-publish').click();
+  await expect(page.locator('#publish-dialog')).toBeHidden();
+  await expect(page.locator('#publication-status')).toContainText('Автослияние запрошено');
+  expect(updates).toHaveLength(1);
+  expect(updates[0].body.sha).toBe(base);
+  expect(updates[0].json).toMatchObject({
+    previousBlobSha: base,
+    spaces: [
+      { widgets: expect.arrayContaining([expect.objectContaining({ title: 'Общий заголовок' })]) },
+    ],
+  });
+  expect(updates[0].json).not.toHaveProperty('activeId');
+  expect(await page.evaluate(() => JSON.stringify([localStorage, sessionStorage]))).not.toContain(
+    'github_pat_test_token',
   );
 });

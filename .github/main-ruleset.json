@@ -31,15 +31,29 @@
     {
       "type": "required_status_checks",
       "parameters": {
-        "strict_required_status_checks_policy": true,
+        "strict_required_status_checks_policy": false,
         "required_status_checks": [
           {
-            "context": "scope"
+            "context": "scope",
+            "integration_id": 15368
           },
           {
-            "context": "check"
+            "context": "check",
+            "integration_id": 15368
           }
         ]
+      }
+    },
+    {
+      "type": "merge_queue",
+      "parameters": {
+        "check_response_timeout_minutes": 35,
+        "grouping_strategy": "ALLGREEN",
+        "max_entries_to_build": 1,
+        "max_entries_to_merge": 1,
+        "merge_method": "MERGE",
+        "min_entries_to_merge": 1,
+        "min_entries_to_merge_wait_minutes": 0
       }
     }
   ]

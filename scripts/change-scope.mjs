@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
+import { validateWorkspaceChange } from './workspace-change.mjs';
 const FILE = /^src\/charts\/(C\d{2})-[a-z0-9][a-z0-9-]*\/(chart\.json|README\.md)$/;
 export function normalizeMode(raw) {
   if (typeof raw !== 'string') return null;
@@ -41,7 +42,7 @@ export function parseScope(body = '') {
     throw new Error('chart allows one C-ID; admin must leave charts empty');
   return { mode, charts, explicit: true };
 }
-export function checkScope(paths, scope) {
+export function checkScope(paths, scope, branch = '') {
   const files = [...new Set(paths)];
   if (!files.length) throw new Error('No changed files');
   if (
@@ -55,6 +56,12 @@ export function checkScope(paths, scope) {
     )
   )
     throw new Error('Invalid path');
+  if (branch.startsWith('admin/layout-')) {
+    if (scope.mode !== 'admin' || !scope.explicit)
+      throw new Error('Workspace publication requires explicit admin scope');
+    if (files.length !== 1 || files[0] !== 'src/layout/workspace.json')
+      throw new Error('Workspace publication may only change src/layout/workspace.json');
+  }
   if (scope.mode === 'admin' && scope.explicit)
     return { mode: 'admin', charts: [], changed: files.length };
   if (scope.mode !== 'chart') throw new Error('Explicit admin mode required');
@@ -74,20 +81,43 @@ export function checkScope(paths, scope) {
   return { mode: 'chart', charts: ids, changed: files.length };
 }
 export function runCli() {
-  const { GITHUB_EVENT_PATH, GITHUB_BASE_SHA, GITHUB_HEAD_SHA } = process.env;
+  const { GITHUB_EVENT_PATH, GITHUB_BASE_SHA, GITHUB_HEAD_SHA, QUEUED_PULL_REQUEST_PATH } =
+    process.env;
   if (![GITHUB_BASE_SHA, GITHUB_HEAD_SHA].every((s) => /^[0-9a-f]{40}$/.test(s || '')))
     throw new Error('Exact base/head SHAs required');
   const event = JSON.parse(readFileSync(GITHUB_EVENT_PATH, 'utf8'));
-  if (!event.pull_request) throw new Error('PR event required');
+  const queued = Boolean(event.merge_group);
+  const pull = queued
+    ? JSON.parse(readFileSync(QUEUED_PULL_REQUEST_PATH, 'utf8'))
+    : event.pull_request;
+  if (!pull) throw new Error('PR event required');
+  if (queued) {
+    const [first, second, extra] = execFileSync(
+      'git',
+      ['show', '-s', '--format=%P', GITHUB_HEAD_SHA],
+      { encoding: 'utf8' },
+    )
+      .trim()
+      .split(' ');
+    if (first !== GITHUB_BASE_SHA || second !== pull.head.sha || extra || pull.base.ref !== 'main')
+      throw new Error('Expected a merge queue candidate with one PR on the specified base');
+  }
   // --no-renames checks both the old and new path; -z handles whitespace safely.
   const paths = execFileSync(
     'git',
-    ['diff', '--no-renames', '--name-only', '-z', GITHUB_BASE_SHA + '...' + GITHUB_HEAD_SHA],
+    [
+      'diff',
+      '--no-renames',
+      '--name-only',
+      '-z',
+      queued ? GITHUB_BASE_SHA + '..' + GITHUB_HEAD_SHA : GITHUB_BASE_SHA + '...' + GITHUB_HEAD_SHA,
+    ],
     { encoding: 'utf8' },
   )
     .split('\0')
     .filter(Boolean);
-  const result = checkScope(paths, parseScope(event.pull_request.body));
+  const result = checkScope(paths, parseScope(pull.body), pull.head.ref);
+  validateWorkspaceChange(GITHUB_BASE_SHA, GITHUB_HEAD_SHA);
   const tree = execFileSync('git', ['ls-tree', '-r', '-z', GITHUB_HEAD_SHA, '--', 'src/charts'], {
     encoding: 'utf8',
   });
