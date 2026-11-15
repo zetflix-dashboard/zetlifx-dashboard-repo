@@ -65,6 +65,8 @@ let editBase;
 let editing = false;
 let writing = false;
 let reading = false;
+let availability;
+let statusTimer;
 let needsAccess = false;
 let conflicted = false;
 let retryAt = 0;
@@ -267,6 +269,7 @@ function setEditing(value) {
 }
 
 function syncStatus(text = '', action = '') {
+  clearTimeout(statusTimer);
   byId('sync-notice').hidden = !text;
   byId('sync-status').textContent = text;
   byId('resolve-sync').hidden = !action;
@@ -278,25 +281,41 @@ function requestAccess() {
   if (!dialog.open) dialog.showModal();
 }
 
-async function refreshWorkspace() {
-  if (reading || writing || pending || document.hidden) return;
-  reading = true;
+function finishAvailability(text) {
+  availability = undefined;
+  syncStatus(text);
+  statusTimer = setTimeout(syncStatus, 3500);
+}
+
+async function readWorkspace() {
+  if (availability) return sync.read();
   try {
-    let latest;
-    try {
-      latest = await sync.read(token);
-    } catch (error) {
-      if (token && [401, 403, 404].includes(error.status) && !error.limited) {
-        setToken('');
-        latest = await sync.read();
-      } else throw error;
+    return await sync.read(token);
+  } catch (error) {
+    if (!token || ![401, 403, 404].includes(error.status) || error.limited) throw error;
+    setToken('');
+    return sync.read();
+  }
+}
+
+async function refreshWorkspace() {
+  if (reading || writing || pending || (document.hidden && !availability)) return;
+  reading = true;
+  const before = confirmed;
+  try {
+    const latest = await readWorkspace();
+    if (availability) {
+      if (!sameLayout(latest.state, availability.state)) return;
+      finishAvailability('Доступно команде');
     }
-    if (pending || writing || sameLayout(latest.state, confirmed)) return;
+    if (pending || writing || before !== confirmed || sameLayout(latest.state, confirmed)) return;
     confirmWorkspace(latest.state);
     if (!editing) showWorkspace(confirmed);
   } catch {
     // Keep the last confirmed view and try again at the next refresh.
   } finally {
+    if (availability && Date.now() >= availability.deadline)
+      finishAvailability('Сохранено · доступность не подтверждена');
     reading = false;
     if (pending) void sendPending();
   }
@@ -327,7 +346,8 @@ async function sendPending() {
     confirmWorkspace(state);
     clearPending();
     showWorkspace(state);
-    syncStatus();
+    availability = { state, deadline: Date.now() + 30000 };
+    syncStatus('Сохранено · проверяем доступность');
   } catch (error) {
     if (error instanceof WorkspaceConflict) {
       conflicted = true;
@@ -343,7 +363,10 @@ async function sendPending() {
     }
   } finally {
     writing = false;
-    if (!pending) byId('edit-btn').focus();
+    if (!pending) {
+      byId('edit-btn').focus();
+      void refreshWorkspace();
+    }
   }
 }
 
@@ -365,6 +388,7 @@ function saveWorkspace() {
     message('В другой вкладке есть неотправленные правки. Завершите сохранение в ней.');
     return;
   }
+  availability = undefined;
   pending = { id: crypto.randomUUID(), base: editBase, state };
   try {
     storage?.setItem(PENDING_KEY, JSON.stringify(pending));
@@ -652,6 +676,13 @@ function syncNow() {
   else void refreshWorkspace();
 }
 
+window.addEventListener('storage', (event) => {
+  if (event.storageArea !== storage || event.key !== CACHE_KEY || pending || writing) return;
+  const latest = readStored(CACHE_KEY);
+  if (!latest || sameLayout(latest, confirmed)) return;
+  confirmed = latest;
+  if (!editing) showWorkspace(confirmed);
+});
 window.addEventListener('online', () => {
   if (retryAt < Date.now() + 10000) retryAt = 0;
   syncNow();
