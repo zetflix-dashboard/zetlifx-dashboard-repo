@@ -7,10 +7,11 @@ function mockWorkspace() {
   let file = fixture;
   let writes = 0;
   let loseResponse = false;
+  let stalePublicFile;
   const sha = () => createHash('sha1').update(file).digest('hex');
   async function install(page) {
     await page.route('https://raw.githubusercontent.com/**/workspace.json?*', (route) =>
-      route.fulfill({ json: JSON.parse(file) }),
+      route.fulfill({ json: JSON.parse(stalePublicFile ?? file) }),
     );
     await page.route('https://api.github.com/**/contents/workspace.json*', async (route) => {
       if (route.request().method() === 'GET')
@@ -31,6 +32,12 @@ function mockWorkspace() {
   return {
     install,
     writes: () => writes,
+    delayPublicRead: () => {
+      stalePublicFile = file;
+    },
+    resumePublicRead: () => {
+      stalePublicFile = undefined;
+    },
     loseNextResponse: () => {
       loseResponse = true;
     },
@@ -572,5 +579,32 @@ test('a lost save response is retried without another commit', async ({ page }) 
   await page.evaluate(() => window.dispatchEvent(new Event('online')));
   await expect(page.locator('#sync-notice')).toBeHidden();
   await expect(page.locator('#edit-btn')).toBeEnabled();
+  expect(remote.writes()).toBe(1);
+});
+
+test('saved layouts reach sibling tabs and public availability is verified separately', async ({
+  page,
+  context,
+}) => {
+  const remote = mockWorkspace();
+  const sibling = await context.newPage();
+  await remote.install(page);
+  await remote.install(sibling);
+  // A sibling on a stalled connection must still receive the acknowledged local save.
+  await sibling.route('https://**/workspace.json*', (route) => route.abort());
+  await sibling.goto('./');
+  await page.goto('./');
+  await page.locator('#edit-btn').click();
+  await page.locator('#add-heading-btn').click();
+  await page.locator('#heading-text').fill('Общий макет');
+  await page.locator('#heading-form button[type=submit]').click();
+  remote.delayPublicRead();
+  await save(page);
+  await expect(page.locator('#sync-status')).toHaveText('Сохранено · проверяем доступность');
+  await expect(sibling.locator('.heading-title')).toHaveText('Общий макет', { timeout: 5000 });
+  remote.resumePublicRead();
+  await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  await expect(page.locator('#sync-status')).toHaveText('Доступно команде');
+  await expect(page.locator('#sync-notice')).toBeHidden();
   expect(remote.writes()).toBe(1);
 });
