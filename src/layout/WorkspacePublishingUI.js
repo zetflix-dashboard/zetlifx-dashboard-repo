@@ -27,11 +27,23 @@ export function initWorkspacePublishing({ storage, publishedSha, draft, preview,
     const descriptions = {
       submitted: ['Изменения отправлены', 'Проверяем макет перед обновлением общего дашборда.'],
       checking: ['Проверяем изменения', 'GitHub выполняет обязательные проверки.'],
-      merged: ['Обновляем общий дашборд', 'Изменения приняты. Новая версия сайта ещё может быть недоступна.'],
+      merged: [
+        'Обновляем общий дашборд',
+        'Изменения приняты. Новая версия сайта ещё может быть недоступна.',
+      ],
       available: ['Изменения доступны команде', 'Сайт содержит отправленный макет.'],
-      conflict: ['Общий макет обновился', 'Ваш черновик сохранён. Скачайте копию и перенесите нужные изменения на новую версию.'],
-      failed: ['Публикация не завершилась', 'Проверьте подробности и повторите отправку после исправления ошибки.'],
-      unknown: ['Статус пока неизвестен', 'Не удалось связаться с GitHub. Изменения в браузере сохранены.'],
+      conflict: [
+        'Общий макет обновился',
+        'Ваш черновик сохранён. Скачайте копию и перенесите нужные изменения на новую версию.',
+      ],
+      failed: [
+        'Публикация не завершилась',
+        'Проверьте подробности и повторите отправку после исправления ошибки.',
+      ],
+      unknown: [
+        'Статус пока неизвестен',
+        'Не удалось связаться с GitHub. Изменения в браузере сохранены.',
+      ],
     };
     const [title, description] = descriptions[kind];
     progress.hidden = false;
@@ -39,11 +51,20 @@ export function initWorkspacePublishing({ storage, publishedSha, draft, preview,
     progressDescription.textContent = description;
     byId('progress-summary').textContent = title;
     progressLink.hidden = !Number.isSafeInteger(number) || number < 1;
-    if (!progressLink.hidden) progressLink.href = 'https://github.com/' + REPOSITORY + '/pull/' + number;
+    if (!progressLink.hidden)
+      progressLink.href = 'https://github.com/' + REPOSITORY + '/pull/' + number;
   }
   function renderPreview() {
     const counts = preview();
-    const labels = { spaces: 'Изменено пространств', added: 'Добавлено блоков', removed: 'Удалено блоков', moved: 'Перемещено блоков', resized: 'Изменено размеров', filters: 'Изменено фильтров', headings: 'Изменено заголовков' };
+    const labels = {
+      spaces: 'Изменено пространств',
+      added: 'Добавлено блоков',
+      removed: 'Удалено блоков',
+      moved: 'Перемещено блоков',
+      resized: 'Изменено размеров',
+      filters: 'Изменено фильтров',
+      headings: 'Изменено заголовков',
+    };
     const container = byId('publish-preview');
     container.replaceChildren();
     const title = document.createElement('strong');
@@ -116,10 +137,12 @@ export function initWorkspacePublishing({ storage, publishedSha, draft, preview,
         stage('failed', pr.number);
         show('Изменения не были опубликованы', pr.number);
       } else if ((await new GitHubPublisher().currentLayoutSha()) !== current.base) {
-        if (!busy && attempt === current)
-          { stage('conflict', pr.number); show('Команда обновила макет · ваша копия сохранена', pr.number); }
+        if (!busy && attempt === current) {
+          stage('conflict', pr.number);
+          show('Команда обновила макет · ваша копия сохранена', pr.number);
+        }
       } else if (!busy && attempt === current) {
-        { stage('checking', pr.number); }
+        stage('checking', pr.number);
       }
     } catch {
       if (!busy && attempt === current) stage('unknown', current.number);
@@ -177,7 +200,10 @@ export function initWorkspacePublishing({ storage, publishedSha, draft, preview,
       remember({ ...attempt, number: pr.number, head: pr.head.sha });
       markSubmitted(blob);
       stage(pr.merged_at ? 'merged' : 'checking', pr.number);
-      show(pr.merged_at ? 'Обновляем общий дашборд' : 'Изменения отправлены на проверку', pr.number);
+      show(
+        pr.merged_at ? 'Обновляем общий дашборд' : 'Изменения отправлены на проверку',
+        pr.number,
+      );
       if (globalThis.PasswordCredential && navigator.credentials?.store) {
         void navigator.credentials
           .store(
@@ -191,9 +217,19 @@ export function initWorkspacePublishing({ storage, publishedSha, draft, preview,
       }
       dialog.close();
     } catch (error) {
-      const text = error.status === 401 ? 'Неверный или просроченный токен GitHub.' : error.status === 403 ? 'Недостаточно прав для публикации или временное ограничение GitHub.' : error.status === 404 ? 'Репозиторий недоступен для этого аккаунта.' : error.message;
+      const text =
+        error.status === 401
+          ? 'Неверный или просроченный токен GitHub.'
+          : error.status === 403
+            ? 'Недостаточно прав для публикации или временное ограничение GitHub.'
+            : error.status === 404
+              ? 'Репозиторий недоступен для этого аккаунта.'
+              : error.message;
       byId('publish-error').textContent = text;
-      stage(/Общий макет изменился/.test(error.message) ? 'conflict' : 'failed', attempt?.number);
+      stage(
+        /Общий макет изменился/.test(error.message) ? 'conflict' : 'failed',
+        attempt?.number,
+      );
       if (attempt?.number) {
         show('Проверьте статус PR в GitHub', attempt.number);
         try {
