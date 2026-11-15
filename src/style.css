@@ -165,6 +165,7 @@ button:disabled {
   top: 8px;
 }
 .topbar {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -197,6 +198,7 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-left: auto;
 }
 .top-actions > button,
 .top-actions > .app-menu > summary {
@@ -1056,43 +1058,70 @@ dialog label {
 }
 
 .workspace-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--ink);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-#workspace-view {
-  appearance: none;
-  position: relative;
-  color: var(--ink);
-  width: 34px;
-  height: 20px;
-  margin: 0;
-  border: 1px solid var(--line);
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 300px;
+  padding: 4px;
   border-radius: 999px;
-  background: var(--surface);
+  background: #0c0c0d;
+  color: #aaaab0;
+  white-space: nowrap;
   cursor: pointer;
 }
 
-#workspace-view::before {
+#workspace-view {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.workspace-option {
+  position: relative;
+  z-index: 1;
+  padding: 9px 16px;
+  border-radius: 999px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  transition: color 160ms ease;
+}
+
+.workspace-switch::before {
   content: '';
   position: absolute;
-  inset: 3px auto 3px 3px;
-  width: 12px;
-  border-radius: 50%;
-  background: currentColor;
+  inset: 4px 50% 4px 4px;
+  border-radius: 999px;
+  background: #202022;
+  transition: transform 160ms ease;
 }
 
-#workspace-view:checked::before {
-  left: 17px;
-  background: var(--accent);
+.workspace-switch:has(#workspace-view:checked)::before {
+  transform: translateX(calc(100% + 4px));
 }
 
-#workspace-view:disabled {
-  opacity: 0.5;
+.workspace-switch:not(:has(#workspace-view:checked)) .workspace-local,
+.workspace-switch:has(#workspace-view:checked) .workspace-common {
+  color: #fff;
+}
+
+.workspace-switch:has(#workspace-view:focus-visible) {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.workspace-switch:has(#workspace-view:disabled) {
+  opacity: 0.55;
   cursor: default;
 }
 
@@ -1130,19 +1159,47 @@ dialog label {
   margin-top: 4px;
 }
 
-@media (max-width: 600px) {
-  .topbar:has(.workspace-switch) {
+@media (max-width: 1050px) {
+  .topbar {
     flex-wrap: wrap;
-    gap: 8px;
   }
 
-  .topbar:has(.workspace-switch) .top-actions {
+  .workspace-switch {
+    position: static;
+    transform: none;
+    order: 3;
+    margin: 0 auto;
+  }
+
+  .top-actions {
     flex-wrap: wrap;
-    max-width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 600px) {
+  .topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .workspace-switch {
+    position: relative;
+    left: auto;
+    width: min(300px, 100%);
+    margin: 0 auto;
+  }
+
+  .top-actions {
+    justify-content: center;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
   }
 
   body:has(.editor-bar:not([hidden])) .publication-toast {
-    bottom: max(152px, env(safe-area-inset-bottom));
+    bottom: max(90px, env(safe-area-inset-bottom));
   }
 }
 

@@ -29,17 +29,17 @@
       <a class="brand" href="./" aria-label="Зетфликс, главная"
         ><span class="brand-mark" aria-hidden="true">Z</span>Зетфликс
       </a>
+      <label class="workspace-switch" for="workspace-view">
+        <input
+          id="workspace-view"
+          type="checkbox"
+          role="switch"
+          aria-label="Показать общий макет"
+        />
+        <span class="workspace-option workspace-local">Локальный</span>
+        <span class="workspace-option workspace-common">Общий</span>
+      </label>
       <div class="top-actions">
-        <label class="workspace-switch" for="workspace-view">
-          <span>Локальный</span>
-          <input
-            id="workspace-view"
-            type="checkbox"
-            role="switch"
-            aria-label="Показать общий макет"
-          />
-          <span>Общий</span>
-        </label>
         <span id="save-state" class="sr-only" role="status"></span
         ><button
           id="theme-toggle"
@@ -54,6 +54,10 @@
           title="Перезагрузить все графики"
         ></button
         ><button id="edit-btn" type="button">Настроить</button>
+        <button id="save-draft" type="button" hidden>Сохранить черновик</button>
+        <button id="publish-workspace" class="primary" type="button" hidden>
+          Опубликовать для всех
+        </button>
         <details class="app-menu">
           <summary
             class="menu-trigger"
@@ -144,8 +148,6 @@
           aria-label="Повторить"
           title="Повторить"
         ></button>
-        <button id="save-draft" type="button">Сохранить черновик</button>
-        <button id="publish-workspace" type="button">Опубликовать для всех</button>
         <button id="reset-draft" type="button" hidden>Открыть общий макет</button>
       </div>
       <p id="message" class="message" role="status" aria-live="polite" hidden></p>
