@@ -15,7 +15,6 @@ import {
   workspaceBlobSha,
 } from './layout/PublishedWorkspace.js';
 import { initWorkspacePublishing } from './layout/WorkspacePublishingUI.js';
-import { recoverSelectedSpaces } from './layout/WorkspaceChanges.js';
 import { validateLocalFilters } from './shared/filters/LocalFilters.js';
 import { validateLayout } from './layout/LayoutStorage.js';
 import { datasets } from './shared/data/datasets.js';
@@ -69,7 +68,7 @@ let naming = 'create';
 let headingEditingId = null;
 let confirmAction;
 let saveTimer;
-let saved = Boolean(loaded.state);
+let saved = false;
 const grid = new GridManager(
   byId('dashboard-grid'),
   charts,
@@ -103,7 +102,7 @@ function message(text) {
 function persist() {
   clearTimeout(saveTimer);
   saved = false;
-  byId('save-state').textContent = 'Сохраняем в браузере…';
+  byId('save-state').textContent = 'Сохранение…';
   saveTimer = setTimeout(flush, 250);
 }
 function flush() {
@@ -120,9 +119,9 @@ function flush() {
       JSON.stringify({ state: draftStore.current(), base: draftBase, submittedSha }),
     );
     saved = true;
-    byId('save-state').textContent = showCommon ? 'Общий макет' : 'Сохранено в браузере';
+    byId('save-state').textContent = showCommon ? 'Общий макет' : 'Локальный макет';
   } catch {
-    byId('save-state').textContent = 'Не удалось сохранить';
+    byId('save-state').textContent = 'Не сохранено';
     message(
       'Сохранение в браузере недоступно. Экспортируйте пространства через меню действий, чтобы не потерять изменения.',
     );
@@ -130,7 +129,7 @@ function flush() {
 }
 function syncControls() {
   byId('publish-workspace').disabled =
-    !editing || draftBase !== publishedSha || sameLayout(store.state, published);
+    !editing || (draftBase === publishedSha && sameLayout(store.state, published));
   byId('reset-draft').hidden = !editing || draftBase === publishedSha;
   byId('undo-btn').disabled = !store.past.length;
   byId('redo-btn').disabled = !store.future.length;
@@ -240,7 +239,7 @@ function setEditing(value) {
   if (editing) {
     if (draftBase !== publishedSha)
       message(
-        'Общий макет изменился. Ваши правки сохранены. Используйте «Перенести изменения» в нижней панели.',
+        'Черновик сделан на старом макете. Экспортируйте его или откройте новый общий макет.',
       );
     render();
     byId('save-draft').focus();
@@ -248,90 +247,36 @@ function setEditing(value) {
     render();
     byId('edit-btn').focus();
   }
-  byId('save-state').textContent = showCommon
-    ? 'Общий макет'
-    : saved
-      ? 'Сохранено в браузере'
-      : 'Мой макет';
+  byId('save-state').textContent = 'Локальный макет';
 }
 byId('edit-btn').addEventListener('click', () => setEditing(true));
 byId('save-draft').addEventListener('click', () => setEditing(false));
 byId('workspace-view').addEventListener('change', (event) => {
   showCommon = event.target.checked;
   store = showCommon ? commonStore : (draftStore ?? commonStore);
-  byId('save-state').textContent = showCommon
-    ? 'Общий макет'
-    : saved
-      ? 'Сохранено в браузере'
-      : 'Мой макет';
+  byId('save-state').textContent = showCommon ? 'Общий макет' : 'Локальный макет';
   render();
 });
-const recoveryDialog = byId('recovery-dialog');
-function openRecovery() {
-  const spaces = byId('recovery-spaces');
-  spaces.replaceChildren();
-  const needsReload = draftBase === publishedSha;
-  const apply = byId('recovery-apply');
-  byId('recovery-error').textContent = needsReload
-    ? 'На сайте открыта прежняя версия. Обновите страницу, чтобы получить актуальный общий макет. Ваш черновик сохранится.'
-    : '';
-  apply.textContent = needsReload ? 'Обновить страницу' : 'Перенести выбранное';
-  for (const space of draftStore.current().spaces) {
-    if (needsReload) break;
-    const label = document.createElement('label');
-    label.className = 'recovery-space';
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.value = space.id;
-    input.checked = true;
-    const text = document.createElement('span');
-    text.textContent = space.title + ' · ' + space.widgets.length + ' блоков';
-    label.append(input, text);
-    spaces.append(label);
-  }
-  apply.disabled = !needsReload && !spaces.querySelector('input:checked');
-  spaces.onchange = () => {
-    apply.disabled = !spaces.querySelector('input:checked');
-  };
-  recoveryDialog.showModal();
-}
-byId('recovery-cancel').addEventListener('click', () => recoveryDialog.close());
-byId('recovery-download').addEventListener('click', exportWorkspace);
-byId('recovery-apply').addEventListener('click', () => {
-  if (draftBase === publishedSha) {
-    flush();
-    if (saved) window.location.reload();
-    return;
-  }
-  const ids = [...byId('recovery-spaces').querySelectorAll('input:checked')].map(
-    (item) => item.value,
-  );
-  if (!ids.length) return;
-  try {
-    const next = recoverSelectedSpaces(published, draftStore.current(), ids);
-    draftStore.commit(next);
-    draftBase = publishedSha;
-    submittedSha = undefined;
-    showCommon = false;
-    store = draftStore;
-    persist();
-    render();
-    message(
-      'Выбранные пространства перенесены в актуальный макет. Проверьте расположение графиков перед публикацией.',
-    );
-    recoveryDialog.close();
-  } catch (error) {
-    byId('recovery-error').textContent = error.message;
-  }
-});
-byId('reset-draft').textContent = 'Перенести изменения';
-byId('reset-draft').addEventListener('click', openRecovery);
+byId('reset-draft').addEventListener('click', () =>
+  confirm(
+    'Открыть новый общий макет?',
+    'Текущий черновик будет скачан как JSON. Перенесите нужные изменения в новый макет вручную.',
+    () => {
+      exportWorkspace();
+      draftBase = publishedSha;
+      submittedSha = undefined;
+      draftStore = new WorkspaceStore(published, known);
+      store = draftStore;
+      persist();
+      message('');
+      render();
+    },
+  ),
+);
 initWorkspacePublishing({
   storage,
   publishedSha,
-  publishedWorkspace: published,
   draft: () => ({ state: draftStore.current(), base: draftBase }),
-  onConflict: openRecovery,
   markSubmitted: (blob) => {
     submittedSha = blob;
     flush();
@@ -598,5 +543,5 @@ window.addEventListener('pagehide', (event) => {
   }
 });
 render();
-byId('save-state').textContent = saved ? 'Сохранено в браузере' : 'Мой макет';
+byId('save-state').textContent = 'Локальный макет';
 if (loaded.warning) message(loaded.warning);

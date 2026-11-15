@@ -201,39 +201,6 @@ test('theme toggle persists and recolors rendered charts without new queries', a
   await expect(page.locator('.widget-chart canvas')).toHaveCount(2);
 });
 
-test('segmented navigation and chart colors adapt to both appearance modes', async ({ page }) => {
-  await ready(page);
-  const appearance = () =>
-    page.evaluate(() => {
-      const style = (element, pseudo) => getComputedStyle(element, pseudo);
-      const root = document.documentElement;
-      const segment = document.querySelector('.workspace-switch');
-      return {
-        theme: root.dataset.theme,
-        track: style(segment).backgroundColor,
-        thumb: style(segment, '::before').backgroundColor,
-        palette: style(root).getPropertyValue('--chart-palette').trim(),
-        tabRadius: style(document.querySelector('[role="tab"]')).borderRadius,
-        cardRadius: style(document.querySelector('.grid-stack-item-content')).borderRadius,
-      };
-    });
-  const first = await appearance();
-  await page.locator('#theme-toggle').click();
-  await expect
-    .poll(() => appearance().then(({ thumb }) => thumb))
-    .toBe(first.theme === 'dark' ? 'rgb(255, 255, 255)' : 'rgb(32, 32, 34)');
-  const second = await appearance();
-  const light = first.theme === 'light' ? first : second;
-  const dark = first.theme === 'dark' ? first : second;
-
-  expect(light.track).not.toBe(dark.track);
-  expect(light.thumb).toBe('rgb(255, 255, 255)');
-  expect(dark.thumb).toBe('rgb(32, 32, 34)');
-  expect(light.palette).not.toBe(dark.palette);
-  expect(light.tabRadius).toBe('999px');
-  expect(dark.cardRadius).toBe('18px');
-});
-
 test('month range picker supports presets, cancel, and responsive layout', async ({ page }) => {
   await ready(page);
   const trigger = page.locator('#period-trigger');
@@ -611,8 +578,6 @@ test('publication resumes a created PR after a network error and never stores th
   await page.locator('#heading-text').fill('Общий заголовок');
   await page.locator('#heading-form button[type="submit"]').click();
   await page.locator('#publish-workspace').click();
-  await expect(page.locator('#publish-summary')).toContainText('1 пространств');
-  await expect(page.locator('#publish-summary')).toContainText('1 добавлено');
   await expect(page.locator('#github-login')).toHaveAttribute('placeholder', '@username');
   await page.locator('#github-login').fill('@editor');
   await page.locator('#github-token').fill('github_pat_test_token');
@@ -621,10 +586,7 @@ test('publication resumes a created PR after a network error and never stores th
   await expect(page.locator('#publication-link')).toHaveAttribute('href', /\/pull\/42$/);
   await page.locator('#confirm-publish').click();
   await expect(page.locator('#publish-dialog')).toBeHidden();
-  await expect(page.locator('#publication-progress')).toContainText('Проверяем изменения');
-  await page.locator('#publication-progress').click();
-  await expect(page.locator('#publication-details')).toBeVisible();
-  await expect(page.locator('#publication-steps li')).toHaveCount(4);
+  await expect(page.locator('#publication-status')).toContainText('Автослияние запрошено');
   expect(updates).toHaveLength(1);
   expect(updates[0].body.sha).toBe(base);
   expect(updates[0].json).toMatchObject({
