@@ -47,3 +47,25 @@ test('a save refuses a new collision caused by two individually valid layouts', 
   remote.spaces[0].widgets[1].y = 4;
   assert.throws(() => mergeWorkspace(base, local, remote, known), WorkspaceConflict);
 });
+
+test('project deletions remove every instance and survive concurrent workspace edits', () => {
+  const before = structuredClone(base);
+  before.spaces.push({
+    id: 'other',
+    title: 'Other',
+    widgets: [{ ...before.spaces[0].widgets[0], instanceId: 'another' }],
+  });
+  const deleting = { ...structuredClone(before), removedCharts: ['C03'] };
+  const editing = structuredClone(before);
+  editing.spaces[0].widgets[1].h = 4;
+  editing.spaces[1].widgets[0].h = 3;
+  const merged = mergeWorkspace(before, deleting, editing, known);
+  assert.equal(merged.version, 3);
+  assert.deepEqual(merged.removedCharts, ['C03']);
+  assert.deepEqual(
+    merged.spaces.map(({ widgets }) => widgets.map(({ chartId }) => chartId)),
+    [['C18'], []],
+  );
+  assert.equal(merged.spaces[0].widgets[0].h, 4);
+  assert.deepEqual(mergeWorkspace(before, editing, deleting, known), merged);
+});

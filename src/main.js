@@ -1,4 +1,5 @@
 import './style.css';
+import { renderChartLibrary } from './shared/charts/ChartLibrary.js';
 import { ChartRegistry } from './shared/charts/ChartRegistry.js';
 import { ChartManager } from './shared/charts/ChartManager.js';
 import { DataClient } from './shared/data/DataClient.js';
@@ -26,6 +27,10 @@ import { initPeriodPicker } from './shared/ui/PeriodPicker.js';
 import { createIcon } from './shared/ui/icons.js';
 const byId = (id) => document.getElementById(id);
 const known = (id) => ChartRegistry.get(id);
+const activeCharts = () => {
+  const removed = new Set(store.state.removedCharts);
+  return ChartRegistry.list().filter((chart) => !removed.has(chart.id));
+};
 const filters = new FilterStore();
 const data = new DataClient();
 const charts = new ChartManager(data, filters);
@@ -216,6 +221,10 @@ byId('space-tabs').addEventListener('keydown', (event) => {
   tabs[next].focus();
 });
 function render() {
+  if (onChartPage()) {
+    updateChartLibrary();
+    return;
+  }
   renderTabs();
   const space = store.active();
   const widgets = (space?.widgets || []).map((widget) => {
@@ -229,6 +238,10 @@ function render() {
   });
   grid.replace({ version: 1, dashboardId: 'current', widgets });
   syncControls();
+  if (byId('catalog').open) {
+    updateCatalogStatus();
+    filterCatalog(byId('catalog-search').value);
+  }
 }
 function rememberSelection(id) {
   selected = id;
@@ -268,9 +281,10 @@ function setEditing(value) {
   byId(editing ? 'save-workspace' : 'edit-btn').focus();
 }
 
-function syncStatus(text = '', action = '') {
+function syncStatus(text = '', action = '', success = false) {
   clearTimeout(statusTimer);
   byId('sync-notice').hidden = !text;
+  byId('sync-notice').classList.toggle('sync-success', success);
   byId('sync-status').textContent = text;
   byId('resolve-sync').hidden = !action;
   byId('resolve-sync').textContent = action;
@@ -281,9 +295,9 @@ function requestAccess() {
   if (!dialog.open) dialog.showModal();
 }
 
-function finishAvailability(text) {
+function finishAvailability(text, success = false) {
   availability = undefined;
-  syncStatus(text);
+  syncStatus(text, '', success);
   statusTimer = setTimeout(syncStatus, 3500);
 }
 
@@ -306,7 +320,7 @@ async function refreshWorkspace() {
     const latest = await readWorkspace();
     if (availability) {
       if (!sameLayout(latest.state, availability.state)) return;
-      finishAvailability('Доступно команде');
+      finishAvailability('Доступно команде', true);
     }
     if (pending || writing || before !== confirmed || sameLayout(latest.state, confirmed)) return;
     confirmWorkspace(latest.state);
@@ -378,6 +392,11 @@ function saveWorkspace() {
     showWorkspace(confirmed);
     return;
   }
+  queueWorkspace(editBase, state);
+}
+
+function queueWorkspace(base, state) {
+  if (pending) return;
   try {
     serializeWorkspace(state);
   } catch (error) {
@@ -389,13 +408,14 @@ function saveWorkspace() {
     return;
   }
   availability = undefined;
-  pending = { id: crypto.randomUUID(), base: editBase, state };
+  pending = { id: crypto.randomUUID(), base, state };
   try {
     storage?.setItem(PENDING_KEY, JSON.stringify(pending));
   } catch {
     // Still try to save to GitHub while this tab is open.
   }
-  setEditing(false);
+  if (editing) setEditing(false);
+  else showWorkspace(state);
   if (!token) requestAccess();
   void sendPending();
 }
@@ -552,6 +572,7 @@ document.addEventListener('keydown', (event) => {
 });
 function openCatalog() {
   byId('catalog-search').value = '';
+  buildCatalog();
   updateCatalogStatus();
   filterCatalog('');
   byId('catalog').showModal();
@@ -563,35 +584,39 @@ byId('empty-action').addEventListener('click', () => {
   if (store.active()) openCatalog();
   else openName('create');
 });
-for (const chart of ChartRegistry.list()) {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'catalog-option';
-  const title = document.createElement('strong');
-  title.textContent = chart.title;
-  const label = document.createElement('span');
-  label.textContent = chart.id + ' · ' + datasets[chart.dataset].label;
-  const status = document.createElement('span');
-  status.className = 'catalog-status';
-  button.dataset.chartId = chart.id;
-  button.append(title, label, status);
-  button.dataset.search = (chart.id + ' ' + chart.title).toLocaleLowerCase('ru-RU');
-  button.addEventListener('click', () => {
-    if (grid.count() >= 100) {
-      message('В пространстве допускается до 100 карточек. Создайте другое пространство.');
+function buildCatalog() {
+  byId('catalog-items').replaceChildren();
+  for (const chart of activeCharts()) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'catalog-option';
+    const title = document.createElement('strong');
+    title.textContent = chart.title;
+    const label = document.createElement('span');
+    label.textContent = chart.id + ' · ' + datasets[chart.dataset].label;
+    const status = document.createElement('span');
+    status.className = 'catalog-status';
+    button.dataset.chartId = chart.id;
+    button.append(title, label, status);
+    button.dataset.search = (chart.id + ' ' + chart.title).toLocaleLowerCase('ru-RU');
+    button.addEventListener('click', () => {
+      if (store.state.removedCharts?.includes(chart.id)) return;
+      if (grid.count() >= 100) {
+        message('В пространстве допускается до 100 карточек. Создайте другое пространство.');
+        byId('catalog').close();
+        return;
+      }
+      grid.addOne({
+        chartId: chart.id,
+        instanceId: crypto.randomUUID(),
+        x: 0,
+        y: grid.getNextRow(),
+        ...chart.defaultSize,
+      });
       byId('catalog').close();
-      return;
-    }
-    grid.addOne({
-      chartId: chart.id,
-      instanceId: crypto.randomUUID(),
-      x: 0,
-      y: grid.getNextRow(),
-      ...chart.defaultSize,
     });
-    byId('catalog').close();
-  });
-  byId('catalog-items').append(button);
+    byId('catalog-items').append(button);
+  }
 }
 function updateCatalogStatus() {
   const current = store.active()?.widgets || [];
@@ -608,6 +633,7 @@ function updateCatalogStatus() {
         space.widgets.some((widget) => widget.chartId === button.dataset.chartId),
     );
     button.classList.toggle('is-added', count > 0);
+    button.disabled = Boolean(store.state.removedCharts?.includes(button.dataset.chartId));
     const status = button.querySelector('.catalog-status');
     status.textContent = count
       ? 'На дашборде · ' + count
@@ -620,7 +646,7 @@ function filterCatalog(value) {
   const query = value.trim().toLocaleLowerCase('ru-RU');
   const buttons = [...byId('catalog-items').children];
   buttons.forEach((button) => {
-    button.hidden = !button.dataset.search.includes(query);
+    button.hidden = button.disabled || !button.dataset.search.includes(query);
   });
   byId('catalog-empty').hidden = buttons.some((button) => !button.hidden);
 }
@@ -661,7 +687,7 @@ byId('import-file').addEventListener('change', async (event) => {
       () => {
         if (pending) return;
         setEditing(true);
-        store.commit(state);
+        store.commit({ ...state, removedCharts: store.state.removedCharts });
         render();
       },
     );
@@ -670,6 +696,54 @@ byId('import-file').addEventListener('change', async (event) => {
   } finally {
     event.target.value = '';
   }
+});
+function removeProjectChart(chart) {
+  if (editing || pending) return;
+  confirm(
+    'Удалить ' + chart.id + ' из проекта?',
+    '«' + chart.title + '» исчезнет из каталога и всех пространств команды.',
+    () => {
+      if (editing || pending || store.state.removedCharts?.includes(chart.id)) return;
+      const base = store.current();
+      const state = validateWorkspace(
+        { ...base, removedCharts: [...(base.removedCharts ?? []), chart.id] },
+        known,
+      );
+      queueWorkspace(base, state);
+    },
+  );
+}
+
+function updateChartLibrary() {
+  const available = activeCharts();
+  renderChartLibrary(
+    byId('chart-library'),
+    available,
+    editing || Boolean(pending),
+    removeProjectChart,
+  );
+  byId('chart-library-empty').hidden = available.length > 0;
+}
+
+const onChartPage = () => ['#charts', '#charts-page'].includes(location.hash);
+function showPage() {
+  const chartPage = onChartPage();
+  document.body.dataset.page = chartPage ? 'charts' : 'dashboard';
+  byId('charts-page').hidden = !chartPage;
+  byId('dashboard-page').hidden = chartPage;
+  document.querySelector('.skip-link').href = chartPage ? '#charts-page' : '#workspace-panel';
+  for (const [id, current] of [
+    ['nav-charts', chartPage],
+    ['nav-dashboard', !chartPage],
+  ]) {
+    if (current) byId(id).setAttribute('aria-current', 'page');
+    else byId(id).removeAttribute('aria-current');
+  }
+  render();
+}
+
+window.addEventListener('hashchange', () => {
+  if (['#charts', '#charts-page', '#dashboard', ''].includes(location.hash)) showPage();
 });
 function syncNow() {
   if (pending) void sendPending();
@@ -705,5 +779,5 @@ window.addEventListener('pagehide', (event) => {
     void data.dispose();
   }
 });
-render();
+showPage();
 syncNow();

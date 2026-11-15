@@ -29,6 +29,10 @@
       <a class="brand" href="./" aria-label="Зетфликс, главная"
         ><span class="brand-mark" aria-hidden="true">Z</span>Зетфликс
       </a>
+      <nav class="page-switch" aria-label="Разделы проекта">
+        <a id="nav-charts" href="#charts" aria-controls="charts-page">Графики</a>
+        <a id="nav-dashboard" href="#dashboard" aria-controls="dashboard-page">Дашборд</a>
+      </nav>
       <div class="top-actions">
         <button
           id="theme-toggle"
@@ -63,7 +67,8 @@
         <input type="file" id="import-file" accept="application/json,.json" hidden />
       </div>
     </header>
-    <main>
+    <p id="message" class="message" role="status" aria-live="polite" hidden></p>
+    <main id="dashboard-page">
       <div class="workspace-toolbar">
         <nav class="space-navigation" aria-label="Пространства">
           <div id="space-tabs" role="tablist" aria-label="Пространства"></div>
@@ -136,11 +141,6 @@
           title="Повторить"
         ></button>
       </div>
-      <p id="message" class="message" role="status" aria-live="polite" hidden></p>
-      <aside id="sync-notice" class="sync-notice" hidden>
-        <span id="sync-status" role="status"></span>
-        <button id="resolve-sync" type="button" hidden></button>
-      </aside>
       <section id="workspace-panel" role="tabpanel" tabindex="0">
         <div id="dashboard-grid" class="grid-stack"></div>
         <div id="empty-layout" class="empty-state" hidden>
@@ -153,6 +153,16 @@
         </div>
       </section>
     </main>
+    <main id="charts-page" class="charts-page" tabindex="-1" hidden>
+      <h1>Графики</h1>
+      <div id="chart-library" class="chart-library"></div>
+      <p id="chart-library-empty" class="message" hidden>В проекте пока нет графиков.</p>
+    </main>
+    <aside id="sync-notice" class="sync-notice" hidden>
+      <span id="sync-status" role="status"></span>
+      <button id="resolve-sync" type="button" hidden></button>
+    </aside>
+
     <dialog id="sync-access" aria-labelledby="sync-access-title">
       <form id="sync-access-form">
         <h2 id="sync-access-title">Подключить GitHub</h2>
