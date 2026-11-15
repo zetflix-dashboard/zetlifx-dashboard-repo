@@ -626,7 +626,7 @@ test('the chart library is separate from the add dialog and removes charts for t
   const tiles = page.locator('.chart-library-tile');
   await expect(tiles).toHaveCount(5);
   await expect(page.locator('.chart-library-preview canvas')).toHaveCount(5);
-  await expect(tiles.filter({ hasText: 'C20' })).toContainText('Таблица');
+  await expect(tiles.filter({ hasText: 'rfm' })).toContainText('Таблица');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.locator('#nav-dashboard').click();
   await page.locator('#edit-btn').click();
@@ -647,4 +647,41 @@ test('the chart library is separate from the add dialog and removes charts for t
   await page.locator('#edit-btn').click();
   await page.locator('#add-btn').click();
   await expect(page.locator('#catalog-items [data-chart-id="C03"]')).toHaveCount(0);
+});
+
+test('catalog copies a stable ID and shares display title changes with the dashboard', async ({
+  page,
+  context,
+}) => {
+  const remote = mockWorkspace();
+  const sibling = await context.newPage();
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await remote.install(page);
+  await remote.install(sibling);
+  await sibling.goto('./');
+  await page.goto('./#charts');
+  const navigation = page.getByRole('navigation', { name: 'Разделы проекта' });
+  await expect(navigation.getByRole('link')).toHaveText(['Дашборд', 'Графики']);
+  const ref = 'financial-trend';
+  const copy = page.getByRole('button', { name: 'Копировать ID ' + ref });
+  await copy.click();
+  await expect(page.getByRole('button', { name: 'ID скопирован: ' + ref })).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(ref);
+  await page.getByRole('button', { name: 'Переименовать ' + ref }).click();
+  await page.getByLabel('Отображаемое название').fill('Финансовый обзор');
+  await page.locator('#chart-name-form button[type="submit"]').click();
+  await expect(page.getByRole('heading', { name: 'Финансовый обзор' })).toBeVisible();
+  await expect(sibling.locator('[data-instance-id="c03-initial"] h3')).toHaveText(
+    'Финансовый обзор',
+  );
+  expect(remote.writes()).toBe(1);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Финансовый обзор' })).toBeVisible();
+  await expect(page.locator('.chart-library-id').filter({ hasText: ref })).toHaveCount(1);
+  await page.locator('#nav-dashboard').click();
+  await page.locator('#edit-btn').click();
+  await page.locator('#add-btn').click();
+  await expect(page.locator('#catalog-items [data-chart-id="C03"]')).toContainText(
+    'Финансовый обзор',
+  );
 });

@@ -13,11 +13,18 @@ function element(tag, className, content) {
 }
 
 export class GridManager {
-  constructor(container, charts, onChange, onEditHeading = () => {}) {
+  constructor(
+    container,
+    charts,
+    onChange,
+    onEditHeading = () => {},
+    getChartTitle = (chart) => chart.title,
+  ) {
     this.container = container;
     this.charts = charts;
     this.onChange = onChange;
     this.onEditHeading = onEditHeading;
+    this.getChartTitle = getChartTitle;
     this.items = new Map();
     this.silent = false;
     this.editing = false;
@@ -106,6 +113,7 @@ export class GridManager {
     }
     const definition = ChartRegistry.get(widget.chartId);
     if (!definition) throw new Error('График не найден: ' + widget.chartId);
+    const title = this.getChartTitle(definition);
     if (this.items.has(widget.instanceId)) throw new Error('Повтор ID карточки');
 
     const item = element('div', 'grid-stack-item');
@@ -115,14 +123,14 @@ export class GridManager {
     const titles = element('div', 'widget-titles');
     const titleRow = element('div', 'widget-title-row');
     titleRow.append(
-      element('h3', '', definition.title),
+      element('h3', '', title),
       element('span', 'widget-chart-id', '· ' + definition.id),
     );
     const info = element('details', 'widget-info');
     const summary = element('summary');
     summary.append(createIcon('info'));
     summary.title = 'О данных';
-    summary.setAttribute('aria-label', 'О данных: ' + definition.title);
+    summary.setAttribute('aria-label', 'О данных: ' + title);
     const description = element(
       'p',
       '',
@@ -164,15 +172,15 @@ export class GridManager {
       this.grid.update(item, patch);
       this.onChange(this.getLayout());
     });
-    grip.setAttribute('aria-label', 'Переместить график: ' + definition.title);
+    grip.setAttribute('aria-label', 'Переместить график: ' + title);
     const remove = element('button', 'widget-remove', '×');
     remove.type = 'button';
     remove.title = 'Убрать график с макета';
-    remove.setAttribute('aria-label', 'Убрать ' + definition.title);
+    remove.setAttribute('aria-label', 'Убрать ' + title);
     remove.addEventListener('click', () => this.removeOne(widget.instanceId));
     const table = element('button', 'widget-table', 'Таблица');
     table.type = 'button';
-    table.setAttribute('aria-label', 'Показать таблицу: ' + definition.title);
+    table.setAttribute('aria-label', 'Показать таблицу: ' + title);
     table.setAttribute('aria-pressed', 'false');
     table.hidden = definition.template === 'table';
     table.addEventListener('click', () => {
@@ -186,7 +194,7 @@ export class GridManager {
       const label = element('label', 'widget-filter');
       const name = element('span', 'sr-only', filter.label);
       const select = element('select', 'widget-filter-select');
-      select.setAttribute('aria-label', definition.title + ': ' + filter.label);
+      select.setAttribute('aria-label', title + ': ' + filter.label);
       select.title = filter.label;
       for (const option of filter.options) {
         const node = element('option', '', option.label);
@@ -209,7 +217,7 @@ export class GridManager {
     const refresh = element('button', 'widget-refresh');
     refresh.type = 'button';
     refresh.title = 'Перезагрузить график';
-    refresh.setAttribute('aria-label', 'Перезагрузить график: ' + definition.title);
+    refresh.setAttribute('aria-label', 'Перезагрузить график: ' + title);
     refresh.append(createIcon('refresh'));
     refresh.addEventListener('click', () => this.charts.refreshOne(widget.instanceId, true));
     actions.append(table, refresh, grip, remove);

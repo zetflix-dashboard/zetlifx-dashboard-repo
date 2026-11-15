@@ -27,9 +27,12 @@ import { initPeriodPicker } from './shared/ui/PeriodPicker.js';
 import { createIcon } from './shared/ui/icons.js';
 const byId = (id) => document.getElementById(id);
 const known = (id) => ChartRegistry.get(id);
+const chartTitle = (chart) => store.state.chartTitles?.[chart.id] ?? chart.title;
 const activeCharts = () => {
   const removed = new Set(store.state.removedCharts);
-  return ChartRegistry.list().filter((chart) => !removed.has(chart.id));
+  return ChartRegistry.list()
+    .filter((chart) => !removed.has(chart.id))
+    .map((chart) => ({ ...chart, title: chartTitle(chart) }));
 };
 const filters = new FilterStore();
 const data = new DataClient();
@@ -150,6 +153,7 @@ const grid = new GridManager(
     }
   },
   (id, title) => openHeading(id, title),
+  chartTitle,
 );
 function message(text) {
   byId('message').textContent = text;
@@ -598,7 +602,7 @@ function buildCatalog() {
     status.className = 'catalog-status';
     button.dataset.chartId = chart.id;
     button.append(title, label, status);
-    button.dataset.search = (chart.id + ' ' + chart.title).toLocaleLowerCase('ru-RU');
+    button.dataset.search = [chart.id, chart.ref, chart.title].join(' ').toLocaleLowerCase('ru-RU');
     button.addEventListener('click', () => {
       if (store.state.removedCharts?.includes(chart.id)) return;
       if (grid.count() >= 100) {
@@ -687,7 +691,12 @@ byId('import-file').addEventListener('change', async (event) => {
       () => {
         if (pending) return;
         setEditing(true);
-        store.commit({ ...state, removedCharts: store.state.removedCharts });
+        store.commit({
+          ...state,
+          removedCharts: store.state.removedCharts,
+          chartTitles: store.state.chartTitles,
+          version: Math.max(state.version, store.state.version),
+        });
         render();
       },
     );
@@ -714,14 +723,57 @@ function removeProjectChart(chart) {
   );
 }
 
+let renamingChart;
+function renameProjectChart(chart) {
+  if (editing || pending) return;
+  renamingChart = chart;
+  const input = byId('chart-display-title');
+  input.value = chart.title;
+  input.setCustomValidity('');
+  byId('chart-name-dialog').showModal();
+  input.select();
+}
+
+byId('cancel-chart-name').addEventListener('click', () => byId('chart-name-dialog').close());
+byId('chart-display-title').addEventListener('input', (event) =>
+  event.target.setCustomValidity(''),
+);
+byId('chart-name-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const chart = known(renamingChart?.id);
+  if (!chart || editing || pending || store.state.removedCharts?.includes(chart.id)) {
+    byId('chart-name-dialog').close();
+    return;
+  }
+  const input = byId('chart-display-title');
+  const title = input.value.trim();
+  if (!title) {
+    input.setCustomValidity('Введите название графика');
+    input.reportValidity();
+    return;
+  }
+  if (chartTitle(chart) !== renamingChart.title) {
+    input.setCustomValidity('Название изменилось. Откройте форму заново.');
+    input.reportValidity();
+    return;
+  }
+  const base = store.current();
+  const chartTitles = { ...base.chartTitles };
+  if (title === chart.title) delete chartTitles[chart.id];
+  else chartTitles[chart.id] = title;
+  const state = validateWorkspace({ ...base, chartTitles }, known);
+  byId('chart-name-dialog').close();
+  if (!sameLayout(base, state)) queueWorkspace(base, state);
+});
+
 function updateChartLibrary() {
   const available = activeCharts();
-  renderChartLibrary(
-    byId('chart-library'),
-    available,
-    editing || Boolean(pending),
-    removeProjectChart,
-  );
+  renderChartLibrary(byId('chart-library'), available, {
+    disabled: editing || Boolean(pending),
+    onRemove: removeProjectChart,
+    onRename: renameProjectChart,
+    onCopyError: (ref) => message('Скопируйте ID вручную: ' + ref),
+  });
   byId('chart-library-empty').hidden = available.length > 0;
 }
 

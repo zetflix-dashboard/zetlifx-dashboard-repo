@@ -1,3 +1,5 @@
+import { createIcon } from '../ui/icons.js';
+
 const types = {
   line: ['Линейная диаграмма', 'M10 55 32 31 48 40 69 15 87 24'],
   bar: ['Столбчатая диаграмма', 'M15 55V39H29V55ZM42 55V24H56V55ZM69 55V12H83V55Z'],
@@ -48,21 +50,63 @@ function preview(template) {
   return canvas;
 }
 
-export function renderChartLibrary(container, charts, disabled, onRemove) {
+function action(icon, label, onClick, disabled = false) {
+  const button = element('button', 'chart-library-action');
+  button.type = 'button';
+  button.title = label;
+  button.setAttribute('aria-label', label);
+  button.append(createIcon(icon));
+  button.disabled = disabled;
+  button.addEventListener('click', onClick);
+  return button;
+}
+
+export function renderChartLibrary(
+  container,
+  charts,
+  { disabled, onRemove, onRename, onCopyError },
+) {
   container.replaceChildren(
     ...charts.map((chart) => {
       const tile = element('article', 'chart-library-tile');
-      const id = element('span', 'chart-library-id', chart.id);
       const visual = element('div', 'chart-library-preview');
       visual.append(preview(chart.template));
+      const information = element('div', 'chart-library-info');
       const title = element('h2', 'chart-library-title', chart.title);
       const type = element('p', 'chart-library-type', types[chart.template][0]);
-      const remove = element('button', 'danger chart-library-remove', 'Удалить из проекта');
-      remove.type = 'button';
-      remove.disabled = disabled;
-      remove.setAttribute('aria-label', 'Удалить из проекта ' + chart.id);
-      remove.addEventListener('click', () => onRemove(chart));
-      tile.append(id, visual, title, type, remove);
+      const identity = element('div', 'chart-library-identity');
+      const id = element('code', 'chart-library-id', chart.ref);
+      const label = 'Копировать ID ' + chart.ref;
+      let timer;
+      const copy = action('copy', label, async () => {
+        try {
+          await navigator.clipboard.writeText(chart.ref);
+          clearTimeout(timer);
+          copy.replaceChildren(createIcon('check'));
+          copy.setAttribute('aria-label', 'ID скопирован: ' + chart.ref);
+          copy.title = 'ID скопирован';
+          timer = setTimeout(() => {
+            copy.replaceChildren(createIcon('copy'));
+            copy.setAttribute('aria-label', label);
+            copy.title = label;
+          }, 1800);
+        } catch {
+          onCopyError(chart.ref);
+        }
+      });
+      identity.append(id, copy);
+      information.append(title, type, identity);
+      const controls = element('div', 'chart-library-controls');
+      const rename = action('edit', 'Переименовать ' + chart.ref, () => onRename(chart), disabled);
+      const remove = action(
+        'trash',
+        'Удалить из проекта ' + chart.id,
+        () => onRemove(chart),
+        disabled,
+      );
+      remove.classList.add('danger');
+      controls.append(rename, remove);
+      tile.append(visual, information, controls);
       return tile;
     }),
   );
