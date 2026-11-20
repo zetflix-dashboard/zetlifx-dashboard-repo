@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync, lstatSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { loadChartCatalog } from './chart-datasets.mjs';
 import { validateChart } from '../src/shared/charts/contract.js';
+loadChartCatalog();
 const root = resolve('src/charts');
 const ids = new Set();
 const refs = new Set();
@@ -11,12 +13,12 @@ for (const entry of readdirSync(root, { withFileTypes: true })) {
   for (const name of readdirSync(resolve(root, entry.name))) {
     const stat = lstatSync(resolve(root, entry.name, name));
     if (
-      !['chart.json', 'README.md'].includes(name) ||
+      !['chart.json', 'query.sql', 'README.md'].includes(name) ||
       !stat.isFile() ||
       stat.mode & 0o111 ||
       stat.size > 30000
     )
-      throw new Error('Only small regular JSON/Markdown chart files are permitted: ' + name);
+      throw new Error('Only small regular JSON/SQL/Markdown chart files are permitted: ' + name);
   }
   const definition = validateChart(
     JSON.parse(readFileSync(resolve(root, entry.name, 'chart.json'), 'utf8')),

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
-const FILE = /^src\/charts\/(C\d{2})-[a-z0-9][a-z0-9-]*\/(chart\.json|README\.md)$/;
+const FILE = /^src\/charts\/(C\d{2})-[a-z0-9][a-z0-9-]*\/(chart\.json|query\.sql|README\.md)$/;
 export function normalizeMode(raw) {
   if (typeof raw !== 'string') return null;
   const value = raw
@@ -37,8 +37,12 @@ export function parseScope(body = '') {
     .split(/[,;\s]+/u)
     .filter(Boolean)
     .map((v) => v.toUpperCase());
-  if (charts.some((v) => !/^C\d{2}$/.test(v)) || charts.length > (mode === 'chart' ? 1 : 0))
-    throw new Error('chart allows one C-ID; admin must leave charts empty');
+  if (
+    charts.some((v) => !/^C\d{2}$/.test(v)) ||
+    new Set(charts).size !== charts.length ||
+    (mode === 'admin' && charts.length)
+  )
+    throw new Error('chart requires unique C-IDs; admin must leave charts empty');
   return { mode, charts, explicit: true };
 }
 export function checkScope(paths, scope) {
@@ -61,16 +65,16 @@ export function checkScope(paths, scope) {
   const matches = files.map((p) => p.match(FILE));
   if (matches.some((m) => !m))
     throw new Error(
-      'chart may change only one chart.json and its README.md; shell, code, styles, tests and instructions require admin',
+      'chart may change only chart.json, query.sql and README.md in chart directories; shared code requires admin',
     );
   const directories = new Set(files.map((p) => p.split('/').slice(0, 3).join('/')));
   const ids = [...new Set(matches.map((m) => m[1]))];
   if (
-    ids.length !== 1 ||
-    directories.size !== 1 ||
-    (scope.charts.length && scope.charts[0] !== ids[0])
+    directories.size !== ids.length ||
+    (scope.charts.length &&
+      (scope.charts.length !== ids.length || ids.some((id) => !scope.charts.includes(id))))
   )
-    throw new Error('chart must change exactly one declared C-ID directory');
+    throw new Error('chart must change only declared C-ID directories, one directory per ID');
   return { mode: 'chart', charts: ids, changed: files.length };
 }
 export function runCli() {

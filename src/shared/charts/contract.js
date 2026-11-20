@@ -1,3 +1,5 @@
+import { validateData } from '../data/queryContract.js';
+import sources from '../data/sources.json' with { type: 'json' };
 import { datasets } from '../data/datasets.js';
 import { availableLocalFilters } from '../filters/LocalFilters.js';
 export const TEMPLATES = Object.freeze([
@@ -38,6 +40,7 @@ export function validateChart(raw, catalog = datasets) {
     'title',
     'question',
     'dataset',
+    'data',
     'template',
     'dimension',
     'series',
@@ -59,7 +62,8 @@ export function validateChart(raw, catalog = datasets) {
     );
   if (!TEMPLATES.includes(raw.template))
     throw new Error('Шаблон не поддерживается: предложите таблицу или отдельную ADMIN-задачу');
-  const fields = catalog[raw.dataset].fields;
+  if (raw.data !== undefined) validateData(raw.data, sources);
+  const fields = raw.data?.fields || catalog[raw.dataset].fields;
   if (
     raw.localFilters !== undefined &&
     (!Array.isArray(raw.localFilters) ||
@@ -272,8 +276,13 @@ function validateStructure(rows, definition, fields) {
 export function validateRows(rows, definition, catalog = datasets) {
   if (!Array.isArray(rows) || rows.length > 5000)
     throw new Error('Нужно агрегировать данные: лимит 5000 строк');
-  const columns = tableFields(definition);
   const fields = catalog[definition.dataset].fields;
+  const columns = definition.data ? Object.keys(fields) : tableFields(definition);
+  if (
+    definition.data &&
+    rows.some((row) => Object.keys(row).some((field) => !Object.hasOwn(fields, field)))
+  )
+    throw new Error('В результате есть необъявленное поле');
   for (const row of rows)
     for (const field of columns) {
       if (!Object.hasOwn(row, field)) throw new Error('В результате отсутствует поле ' + field);

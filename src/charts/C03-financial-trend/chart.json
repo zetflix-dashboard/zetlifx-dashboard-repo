@@ -19,5 +19,59 @@
       "type": "line"
     }
   ],
-  "localFilters": ["quarter"]
+  "localFilters": ["quarter"],
+  "data": {
+    "label": "P&L · контрольные итоги",
+    "sources": ["pl_control.parquet"],
+    "grain": "месяц",
+    "dateRole": "месяц признания",
+    "filters": ["period"],
+    "localFilters": [
+      {
+        "id": "quarter",
+        "label": "Квартал",
+        "options": [
+          {
+            "value": "all",
+            "label": "Все кварталы"
+          },
+          {
+            "value": "1",
+            "label": "I квартал"
+          },
+          {
+            "value": "2",
+            "label": "II квартал"
+          },
+          {
+            "value": "3",
+            "label": "III квартал"
+          },
+          {
+            "value": "4",
+            "label": "IV квартал"
+          }
+        ]
+      }
+    ],
+    "limitation": "Контрольные итоги PL_Control. Детальная сверка по фактам пока не реализована; сегментация недоступна.",
+    "fields": {
+      "period": {
+        "label": "Месяц",
+        "unit": "month"
+      },
+      "net_revenue": {
+        "label": "Выручка",
+        "unit": "rub"
+      },
+      "operating_profit": {
+        "label": "Опер. прибыль",
+        "unit": "rub"
+      },
+      "margin_pct": {
+        "label": "Опер. маржа",
+        "unit": "percent"
+      }
+    }
+  }
 }

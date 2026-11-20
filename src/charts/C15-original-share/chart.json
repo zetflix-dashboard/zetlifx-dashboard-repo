@@ -10,5 +10,47 @@
       "field": "hours"
     }
   ],
-  "localFilters": ["access"]
+  "localFilters": ["access"],
+  "data": {
+    "label": "часы просмотра по происхождению",
+    "sources": ["viewing_daily.parquet", "users.parquet", "content_titles.parquet"],
+    "grain": "происхождение контента за период",
+    "dateRole": "дата просмотра",
+    "filters": ["period"],
+    "localFilters": [
+      {
+        "id": "access",
+        "label": "Доступ",
+        "options": [
+          {
+            "value": "all",
+            "label": "Все виды доступа"
+          },
+          {
+            "value": "Подписка",
+            "label": "Подписка"
+          },
+          {
+            "value": "Пробный период",
+            "label": "Пробный период"
+          },
+          {
+            "value": "Партнерский пакет",
+            "label": "Партнёрский пакет"
+          }
+        ]
+      }
+    ],
+    "limitation": "Только часы подписочного доступа, пробных периодов и партнёрских пакетов; аренда и тестовые пользователи исключены.",
+    "fields": {
+      "origin": {
+        "label": "Происхождение",
+        "unit": "text"
+      },
+      "hours": {
+        "label": "Часы просмотра",
+        "unit": "number"
+      }
+    }
+  }
 }

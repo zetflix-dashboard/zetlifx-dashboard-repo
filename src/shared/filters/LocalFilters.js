@@ -1,7 +1,7 @@
 import { datasets } from '../data/datasets.js';
 import { dateRange } from './FilterStore.js';
 
-// Every selectable value is defined in the trusted data catalogue, never in a chart.
+// Options come from validated chart metadata; user selections remain parameterized.
 export function availableLocalFilters(definition, catalog = datasets) {
   const dataset = catalog[definition.dataset];
   const approved = dataset.localFilters || [];
