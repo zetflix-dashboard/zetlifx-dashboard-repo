@@ -12,5 +12,27 @@
     {
       "field": "ecpm"
     }
-  ]
+  ],
+  "data": {
+    "label": "Реклама · месячные показатели",
+    "sources": ["ad_inventory.parquet", "ad_revenue.parquet"],
+    "grain": "месяц",
+    "dateRole": "месяц показов",
+    "filters": ["period"],
+    "limitation": "Заполняемость и eCPM. Доход на пользователя PL1 ещё не реализован. Другие разрезы недоступны.",
+    "fields": {
+      "period": {
+        "label": "Месяц",
+        "unit": "month"
+      },
+      "fill_pct": {
+        "label": "Заполняемость",
+        "unit": "percent"
+      },
+      "ecpm": {
+        "label": "eCPM",
+        "unit": "rub"
+      }
+    }
+  }
 }

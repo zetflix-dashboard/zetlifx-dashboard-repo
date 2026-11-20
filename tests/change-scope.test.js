@@ -21,7 +21,7 @@ test('mode names normalize case and explicit Russian aliases', () => {
   ])
     assert.equal(normalizeMode(value), null);
 });
-test('ordinary request defaults to one chart and cannot modify the shell or instructions', () => {
+test('ordinary request allows isolated charts and cannot modify the shell or instructions', () => {
   const scope = parseScope('Make it beautiful');
   assert.equal(checkScope(['src/charts/C03-trend/chart.json'], scope).mode, 'chart');
   for (const path of [
@@ -33,8 +33,16 @@ test('ordinary request defaults to one chart and cannot modify the shell or inst
     'docs/charts.md',
   ])
     assert.throws(() => checkScope([path], scope));
-  assert.throws(() =>
-    checkScope(['src/charts/C03-trend/chart.json', 'src/charts/C18-ads/chart.json'], scope),
+  assert.equal(
+    checkScope(['src/charts/C03-trend/query.sql', 'src/charts/C18-ads/chart.json'], scope).changed,
+    2,
+  );
+  assert.equal(
+    checkScope(
+      ['src/charts/C03-trend/query.sql', 'src/charts/C18-ads/chart.json'],
+      parseScope(block('chart', 'C03 C18')),
+    ).changed,
+    2,
   );
   assert.throws(() =>
     checkScope(['src/charts/C03-one/chart.json', 'src/charts/C03-two/chart.json'], scope),
@@ -43,7 +51,6 @@ test('ordinary request defaults to one chart and cannot modify the shell or inst
 test('malformed, duplicate, ambiguous and removed modes fail closed', () => {
   for (const body of [
     block('batch', 'C03 C18'),
-    block('chart', 'C03 C18'),
     block('chart', 'C03 C03'),
     block('admin', 'C03'),
     block('oops'),

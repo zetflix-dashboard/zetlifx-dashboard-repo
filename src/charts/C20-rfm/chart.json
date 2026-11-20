@@ -23,5 +23,63 @@
     "revenue_per_user",
     "never_viewed_users"
   ],
-  "totals": ["users", "user_share_pct", "revenue", "share_pct", "never_viewed_users"]
+  "totals": ["users", "user_share_pct", "revenue", "share_pct", "never_viewed_users"],
+  "data": {
+    "label": "RFM на 31.12.2025",
+    "sources": ["users.parquet", "billing_events.parquet", "viewing_daily.parquet"],
+    "grain": "RFM-сегмент прямых плательщиков",
+    "dateRole": "фиксированный срез 31.12.2025",
+    "filters": [],
+    "limitation": "Фиксированный срез 31.12.2025: только прямые пользователи с успешными списаниями 2024–2025, без тестовых и партнёров. R — дни от последнего просмотра; F — месяцы оплаченного доступа из успешных событий в окне; M — сумма успешных списаний. Общий фильтр периода не применяется. Доля — от суммы успешных платежей, не признанная выручка.",
+    "fields": {
+      "segment": {
+        "label": "RFM",
+        "unit": "text"
+      },
+      "recency_score": {
+        "label": "R",
+        "unit": "number"
+      },
+      "frequency_score": {
+        "label": "F",
+        "unit": "number"
+      },
+      "monetary_score": {
+        "label": "M",
+        "unit": "number"
+      },
+      "users": {
+        "label": "Пользователи",
+        "unit": "number"
+      },
+      "user_share_pct": {
+        "label": "Доля пользователей",
+        "unit": "percent"
+      },
+      "revenue": {
+        "label": "Платежи",
+        "unit": "rub"
+      },
+      "share_pct": {
+        "label": "Доля платежей",
+        "unit": "percent"
+      },
+      "revenue_per_user": {
+        "label": "Платежи на пользователя",
+        "unit": "rub"
+      },
+      "avg_paid_months": {
+        "label": "Оплаченных месяцев, сред.",
+        "unit": "number"
+      },
+      "avg_days_since_view": {
+        "label": "Дней с просмотра, сред.",
+        "unit": "number"
+      },
+      "never_viewed_users": {
+        "label": "Без просмотров",
+        "unit": "number"
+      }
+    }
+  }
 }

@@ -11,5 +11,84 @@
     }
   ],
   "pointLabel": "title",
-  "localFilters": ["genre"]
+  "localFilters": ["genre"],
+  "data": {
+    "label": "стоимость часа просмотра",
+    "sources": [
+      "content_amortization.parquet",
+      "viewing_daily.parquet",
+      "users.parquet",
+      "content_titles.parquet"
+    ],
+    "grain": "тайтл за выбранный период",
+    "dateRole": "месяц амортизации и дата просмотра",
+    "filters": ["period"],
+    "localFilters": [
+      {
+        "id": "genre",
+        "label": "Жанр",
+        "options": [
+          {
+            "value": "all",
+            "label": "Все жанры"
+          },
+          {
+            "value": "Драма",
+            "label": "Драма"
+          },
+          {
+            "value": "Комедия",
+            "label": "Комедия"
+          },
+          {
+            "value": "Мультфильм",
+            "label": "Мультфильм"
+          },
+          {
+            "value": "Детектив",
+            "label": "Детектив"
+          },
+          {
+            "value": "Триллер",
+            "label": "Триллер"
+          },
+          {
+            "value": "Боевик",
+            "label": "Боевик"
+          },
+          {
+            "value": "Фантастика",
+            "label": "Фантастика"
+          },
+          {
+            "value": "Мелодрама",
+            "label": "Мелодрама"
+          },
+          {
+            "value": "Документальный",
+            "label": "Документальный"
+          },
+          {
+            "value": "Ужасы",
+            "label": "Ужасы"
+          }
+        ]
+      }
+    ],
+    "limitation": "Амортизация за выбранные месяцы делится на часы подписочного просмотра за те же месяцы. Тайтлы с нулём часов исключены.",
+    "fields": {
+      "title": {
+        "label": "Тайтл",
+        "unit": "text"
+      },
+      "hours": {
+        "label": "Часы просмотра",
+        "unit": "number"
+      },
+      "cost_per_hour": {
+        "label": "Стоимость часа",
+        "unit": "rub"
+      }
+    }
+  }
 }
