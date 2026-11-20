@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { treeHistory, treeRows, treeSparkline } from '../src/shared/charts/treeData.js';
 import test from 'node:test';
 import * as echarts from 'echarts';
 import { tableFields, validateChart, validateRows } from '../src/shared/charts/contract.js';
@@ -191,4 +192,107 @@ test('sankey renders separate sides and selected-source focus without falsifying
   assert.throws(() => validateChart({ ...definition, target: 'amount' }, catalog));
   assert.throws(() => validateChart({ ...definition, sourceTitle: 'x'.repeat(61) }, catalog));
   assert.throws(() => validateChart({ ...definition, html: '<svg></svg>' }, catalog));
+});
+
+test('tree tiles support monthly history, descriptions and configurable windows without changing snapshot trees', () => {
+  const definition = {
+    ...base,
+    template: 'tree',
+    parent: 'parent',
+    description: 'to',
+    trend: { period: 'cohort', periods: 3 },
+  };
+  const rows = [
+    { label: 'Прибыль', parent: null, amount: 0, cohort: '2025-01-01', to: 'Доходы минус расходы' },
+    {
+      label: 'Прибыль',
+      parent: null,
+      amount: 60,
+      cohort: '2025-03-01',
+      to: 'Доходы минус расходы',
+    },
+    {
+      label: 'Расходы',
+      parent: 'Прибыль',
+      amount: -40,
+      cohort: '2025-03-01',
+      to: 'Затраты за месяц',
+    },
+    {
+      label: 'Расходы',
+      parent: 'Прибыль',
+      amount: -20,
+      cohort: '2025-01-01',
+      to: 'Затраты за месяц',
+    },
+  ];
+  const { option, svg } = render(definition, rows, treeOption);
+  const series = option.series[0];
+  assert.equal(series.orient, 'TB');
+  assert.equal(series.roam, 'move');
+  assert.equal(series.expandAndCollapse, false);
+  assert.equal(series.data[0].value, 60);
+  assert.deepEqual(series.symbolSize, [216, 108]);
+  assert.match(decodeURIComponent(series.data[0].symbol), /<rect.*rx="12"/);
+  assert.match(decodeURIComponent(series.data[0].symbol), /<text.*>i<\/text>/);
+  assert.match(option.tooltip.formatter({ data: series.data[0] }), /Доходы минус расходы/);
+  assert.match(svg, /Прибыль/);
+  assert.deepEqual(treeHistory(definition, rows).get('Прибыль'), [0, null, 60]);
+  assert.deepEqual(treeHistory(definition, rows, 2).get('Прибыль'), [null, 60]);
+  assert.equal(
+    treeRows(definition, [...rows].reverse()).find((row) => row.label === 'Прибыль').amount,
+    60,
+  );
+  assert.deepEqual(tableFields(definition), ['label', 'parent', 'to', 'cohort', 'amount']);
+  assert.throws(() => validateRows([...rows, rows[0]], definition, catalog), /уникальны/);
+  assert.throws(
+    () => validateRows([{ ...rows[0], cohort: '2025-13-01' }], definition, catalog),
+    /дату/,
+  );
+  assert.throws(() => validateRows([{ ...rows[0], cohort: null }], definition, catalog));
+  assert.throws(
+    () => validateRows([rows[0], { ...rows[1], parent: 'Расходы' }, rows[2]], definition, catalog),
+    /Родитель/,
+  );
+  assert.throws(() => validateChart({ ...definition, description: 'amount' }, catalog), /Описание/);
+  for (const trend of [
+    { period: 'label', periods: 3 },
+    { period: 'cohort', periods: 0 },
+    { period: 'cohort', periods: 25 },
+    { period: 'cohort', periods: 3, code: 'x' },
+  ])
+    assert.throws(() => validateChart({ ...definition, trend }, catalog));
+  assert.throws(
+    () =>
+      validateChart(
+        { ...definition, template: 'line', parent: undefined, description: undefined },
+        catalog,
+      ),
+    /только дерев/,
+  );
+});
+
+test('tree sparklines distinguish growth, decline and flat values, preserve gaps and never fabricate history', () => {
+  const theme = chartTheme();
+  assert.equal(treeSparkline([], theme).path, '');
+  assert.equal(treeSparkline([null, 0], theme).path, '');
+  const up = treeSparkline([0, 5, 10], theme);
+  const down = treeSparkline([10, 5, 0], theme);
+  const flat = treeSparkline([0, 0], theme);
+  assert.notEqual(up.color, down.color);
+  assert.equal(flat.color, theme.axis);
+  assert.doesNotMatch(flat.path, /NaN|Infinity/);
+  const gap = treeSparkline([0, null, 10], theme);
+  assert.equal((gap.path.match(/M/g) || []).length, 2);
+  assert.doesNotMatch(gap.path, /L/);
+  assert.notEqual(treeSparkline([0, 1], { ...theme, tooltip: '#1c2025' }).color, up.color);
+  const definition = { ...base, template: 'tree', parent: 'parent' };
+  const option = treeOption(
+    definition,
+    [{ label: 'Ноль', parent: null, amount: 0 }],
+    fields,
+    theme,
+  );
+  assert.equal(option.series[0].data[0].value, 0);
+  assert.equal(option.series[0].data[0].hasHistory, false);
 });

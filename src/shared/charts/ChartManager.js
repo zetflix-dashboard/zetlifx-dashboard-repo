@@ -66,6 +66,7 @@ export class ChartManager {
       request: 0,
       tableSort: {},
       focusSource: null,
+      treePeriods: definition.trend?.periods || 12,
       table: definition.template === 'table',
     };
     session.observer = new ResizeObserver(() => session.chart?.resize());
@@ -86,12 +87,75 @@ export class ChartManager {
       'sankey-view',
       !session.table && session.definition.template === 'sankey',
     );
+    session.node.classList.toggle(
+      'tree-view',
+      !session.table && session.definition.template === 'tree',
+    );
     if (session.table) {
       renderTable(session.node, session.definition, session.rows, session.tableSort);
     } else if (session.definition.template === 'indicator') {
       renderIndicator(session.node, session.definition, session.rows);
     } else {
       let plot = session.node;
+      if (session.definition.template === 'tree') {
+        const controls = document.createElement('div');
+        controls.className = 'tree-controls';
+        const hint = document.createElement('span');
+        hint.textContent = 'Перетаскивайте холст';
+        controls.append(hint);
+        if (session.definition.trend) {
+          const label = document.createElement('label');
+          label.textContent = 'Динамика: ';
+          const select = document.createElement('select');
+          select.setAttribute('aria-label', 'Период мини-графиков дерева');
+          const periods = [...new Set([3, 6, 12, 24, session.definition.trend.periods])].sort(
+            (a, b) => a - b,
+          );
+          for (const months of periods) {
+            const option = document.createElement('option');
+            option.value = String(months);
+            option.textContent = months + ' мес.';
+            option.selected = months === session.treePeriods;
+            select.append(option);
+          }
+          select.addEventListener('change', () => {
+            session.treePeriods = Number(select.value);
+            this.updateTree(session);
+          });
+          label.append(select);
+          controls.append(label);
+        }
+        const reset = document.createElement('button');
+        reset.type = 'button';
+        reset.textContent = 'К началу';
+        reset.addEventListener('click', () => this.updateTree(session));
+        controls.append(reset);
+        plot = document.createElement('div');
+        plot.className = 'tree-plot';
+        plot.tabIndex = 0;
+        plot.setAttribute('role', 'group');
+        plot.setAttribute(
+          'aria-label',
+          'Дерево метрик. Перетаскивайте мышью или используйте клавиши со стрелками. Описание доступно при наведении на i.',
+        );
+        plot.addEventListener('keydown', (event) => {
+          const delta = {
+            ArrowLeft: [60, 0],
+            ArrowRight: [-60, 0],
+            ArrowUp: [0, 60],
+            ArrowDown: [0, -60],
+          }[event.key];
+          if (!delta) return;
+          event.preventDefault();
+          session.chart.dispatchAction({
+            type: 'treeRoam',
+            seriesIndex: 0,
+            dx: delta[0],
+            dy: delta[1],
+          });
+        });
+        session.node.append(controls, plot);
+      }
       if (session.definition.template === 'sankey') {
         const controls = document.createElement('div');
         controls.className = 'sankey-filters';
@@ -135,9 +199,24 @@ export class ChartManager {
           matchMedia('(prefers-reduced-motion: reduce)').matches,
           chartTheme(),
           session.focusSource,
+          session.treePeriods,
         ),
       );
     }
+  }
+  updateTree(session) {
+    if (!session.rows?.length) return;
+    session.chart?.setOption(
+      buildOption(
+        session.definition,
+        session.rows,
+        matchMedia('(prefers-reduced-motion: reduce)').matches,
+        chartTheme(),
+        null,
+        session.treePeriods,
+      ),
+      { notMerge: true },
+    );
   }
   setLocalFilters(id, next) {
     const session = this.sessions.get(id);
@@ -219,6 +298,7 @@ export class ChartManager {
             matchMedia('(prefers-reduced-motion: reduce)').matches,
             chartTheme(),
             session.focusSource,
+            session.treePeriods,
           ),
           { notMerge: true },
         );

@@ -48,6 +48,7 @@ export function buildOption(
   reducedMotion = false,
   theme = chartTheme(),
   selectedSource = null,
+  treePeriods = null,
 ) {
   const fields = datasets[definition.dataset].fields;
   const specializedOption = specializedOptions[definition.template];
@@ -57,7 +58,7 @@ export function buildOption(
       rows,
       fields,
       theme,
-      selectedSource,
+      definition.template === 'tree' ? treePeriods : selectedSource,
     );
     return {
       backgroundColor: 'transparent',

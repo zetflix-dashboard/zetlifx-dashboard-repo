@@ -1,3 +1,4 @@
+import { treeRows } from './treeData.js';
 import { datasets } from '../data/datasets.js';
 import { availableLocalFilters } from '../filters/LocalFilters.js';
 export const TEMPLATES = Object.freeze([
@@ -49,6 +50,8 @@ export function validateChart(raw, catalog = datasets) {
     'aggregation',
     'sourceTitle',
     'targetTitle',
+    'description',
+    'trend',
     ...Object.values(extraFields),
   ]);
   if (!/^C\d{2}$/.test(raw.id) || !text(raw.title, 90) || !text(raw.question, 300))
@@ -70,6 +73,25 @@ export function validateChart(raw, catalog = datasets) {
     throw new Error('Некорректные локальные фильтры');
   availableLocalFilters(raw, catalog);
   const validField = (f) => typeof f === 'string' && Object.hasOwn(fields, f);
+  if (
+    raw.description !== undefined &&
+    (raw.template !== 'tree' ||
+      !validField(raw.description) ||
+      fields[raw.description].unit !== 'text')
+  )
+    throw new Error('Описание дерева требует текстовое поле');
+  if (raw.trend !== undefined) {
+    if (raw.template !== 'tree') throw new Error('История доступна только дереву');
+    keys(raw.trend, ['period', 'periods']);
+    if (
+      !validField(raw.trend.period) ||
+      fields[raw.trend.period].unit !== 'month' ||
+      !Number.isInteger(raw.trend.periods) ||
+      raw.trend.periods < 2 ||
+      raw.trend.periods > 24
+    )
+      throw new Error('История дерева требует месяц и период от 2 до 24 месяцев');
+  }
   const extra = extraFields[raw.template];
   if (
     Object.values(extraFields).some((field) => field !== extra && raw[field] !== undefined) ||
@@ -189,6 +211,8 @@ export function tableFields(definition) {
         definition.dimension,
         definition[extraFields[definition.template]],
         definition.pointLabel,
+        definition.description,
+        definition.trend?.period,
         ...definition.series.map((s) => s.field),
       ].filter(Boolean),
     ),
@@ -213,7 +237,9 @@ function validateStructure(rows, definition, fields) {
       ? [dimension, category]
       : template === 'sankey'
         ? [dimension, target]
-        : [dimension];
+        : template === 'tree' && definition.trend
+          ? [dimension, definition.trend.period]
+          : [dimension];
   const seen = new Set();
   for (const row of rows) {
     if (dimensions.some((field) => row[field] == null || row[field] === ''))
@@ -233,6 +259,21 @@ function validateStructure(rows, definition, fields) {
   }
 
   if (template === 'tree') {
+    if (definition.trend) {
+      const parents = new Map();
+      for (const row of rows) {
+        if (
+          typeof row[definition.trend.period] !== 'string' ||
+          !/^\d{4}-(0[1-9]|1[0-2])-01$/.test(row[definition.trend.period])
+        )
+          throw new Error('История дерева требует дату первого числа месяца');
+        const id = String(row[dimension]);
+        if (parents.has(id) && parents.get(id) !== row[parent])
+          throw new Error('Родитель узла должен совпадать во всей истории');
+        parents.set(id, row[parent]);
+      }
+      rows = treeRows(definition, rows);
+    }
     if (rows.length > 200) throw new Error('Дерево поддерживает до 200 узлов');
     const nodes = new Set(rows.map((row) => String(row[dimension])));
     const roots = rows.filter((row) => row[parent] === null);
