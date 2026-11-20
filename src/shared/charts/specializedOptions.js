@@ -1,41 +1,96 @@
 import { isNumeric } from './contract.js';
 import { formatValue } from '../ui/format.js';
+import { treeRows, treeHistory, treeSparkline } from './treeData.js';
 
-export function treeOption(definition, rows, fields, theme) {
-  const { dimension, parent, pointLabel } = definition;
+export function treeOption(definition, rows, fields, theme, periods = null) {
+  const { dimension, parent, pointLabel, description } = definition;
   const metric = definition.series[0].field;
   const unit = fields[metric].unit;
+  const current = treeRows(definition, rows);
+  const histories = treeHistory(definition, rows, periods || definition.trend?.periods || 12);
+  const escape = (value) =>
+    String(value).replace(
+      /[&<>"']/g,
+      (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[char],
+    );
   const nodes = new Map(
-    rows.map((row) => [
-      String(row[dimension]),
-      {
-        name: String(row[pointLabel || dimension] ?? row[dimension]),
-        value: row[metric] == null ? null : Number(row[metric]),
-        children: [],
-      },
-    ]),
+    current.map((row) => {
+      const id = String(row[dimension]);
+      const spark = treeSparkline(histories.get(id) || [], theme);
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="216" height="108" viewBox="0 0 216 108"><rect x="1" y="1" width="214" height="106" rx="12" fill="${escape(theme.tooltip)}" stroke="${escape(theme.border)}"/><path d="${spark.path}" fill="none" stroke="${spark.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/><circle cx="196" cy="20" r="7" fill="none" stroke="${escape(theme.axis)}"/><text x="196" y="24" text-anchor="middle" font-family="sans-serif" font-size="11" fill="${escape(theme.axis)}">i</text></svg>`;
+      return [
+        id,
+        {
+          name: String(row[pointLabel || dimension] ?? row[dimension]),
+          value: row[metric] == null ? null : Number(row[metric]),
+          description: description
+            ? String(row[description] || 'Описание метрики не задано')
+            : 'Описание метрики не задано',
+          period: definition.trend ? row[definition.trend.period] : null,
+          hasHistory: Boolean(spark.path),
+          symbol: 'image://data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+          children: [],
+        },
+      ];
+    }),
   );
-  const root = rows.find((row) => row[parent] === null);
-  for (const row of rows) {
+  const root = current.find((row) => row[parent] === null);
+  for (const row of current) {
     if (row[parent] !== null)
       nodes.get(String(row[parent])).children.push(nodes.get(String(row[dimension])));
   }
+  let leaves = 0;
+  let depth = 0;
+  const measure = (node, level) => {
+    depth = Math.max(depth, level);
+    if (!node.children.length) leaves++;
+    for (const child of node.children) measure(child, level + 1);
+  };
+  if (root) measure(nodes.get(String(root[dimension])), 0);
+  const label = {
+    position: 'inside',
+    verticalAlign: 'top',
+    offset: [-88, -37],
+    align: 'left',
+    formatter: ({ data }) => {
+      // Plain text avoids interpreting user labels as ECharts rich-text markup.
+      const name = data.name.length > 20 ? data.name.slice(0, 19) + '…' : data.name;
+      return name + '\n' + formatValue(data.value, unit, true);
+    },
+    color: theme.text,
+    fontSize: 14,
+    lineHeight: 24,
+    fontWeight: 600,
+  };
   return {
-    tooltip: { valueFormatter: (value) => formatValue(value, unit) },
+    tooltip: {
+      formatter: ({ data }) =>
+        [
+          data.name,
+          formatValue(data.value, unit),
+          data.description,
+          ...(data.period ? ['Значение за ' + data.period.slice(0, 7)] : []),
+          ...(!data.hasHistory ? ['Недостаточно истории для линии'] : []),
+        ].join('\n'),
+    },
     series: [
       {
         type: 'tree',
         data: root ? [nodes.get(String(root[dimension]))] : [],
-        top: 14,
-        bottom: 14,
-        left: '25%',
-        right: '32%',
-        initialTreeDepth: 2,
-        symbolSize: 8,
+        orient: 'TB',
+        roam: 'move',
+        expandAndCollapse: false,
+        initialTreeDepth: -1,
+        top: 68,
+        left: 'center',
+        width: Math.max(1, leaves) * 320,
+        height: Math.max(1, depth) * 168,
+        symbolSize: [216, 108],
         edgeShape: 'polyline',
-        lineStyle: { color: theme.axis },
-        label: { position: 'left', color: theme.text, overflow: 'truncate', width: 105 },
-        leaves: { label: { position: 'right' } },
+        edgeForkPosition: '50%',
+        lineStyle: { color: theme.border, width: 1.5 },
+        label,
+        leaves: { label },
         emphasis: { focus: 'ancestor' },
       },
     ],
